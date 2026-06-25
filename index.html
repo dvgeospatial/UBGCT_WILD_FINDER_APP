@@ -6,8 +6,8 @@
     <title>Nature Observations: Upper Bure Conservation Triangle</title>
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" crossorigin=""/>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" crossorigin=""/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" crossorigin=""/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" crossorigin=""/>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
@@ -250,7 +250,7 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <script src="https://unpkg.com/esri-leaflet/dist/esri-leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js" crossorigin=""></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
 
     <script>
         const COLOUR_LIGHT_GREEN = '#BCCB54';
@@ -341,7 +341,7 @@
         function hideClusterPopup() { clusterPopup.classList.add('hidden'); }
 
         function repositionClusterPopup(anchorPx) {
-            if (isMobile) return; // CSS handles fixed positioning on mobile
+            if (isMobile) return;
             const mapEl = document.getElementById('map');
             const mapW = mapEl.offsetWidth, mapH = mapEl.offsetHeight;
             const popW = clusterPopup.offsetWidth, popH = clusterPopup.offsetHeight;
@@ -375,7 +375,6 @@
 
         document.getElementById('cluster-popup-close').addEventListener('click', hideClusterPopup);
 
-        // Keep the popup open when the mouse moves into it
         let popupHoverTimeout;
         clusterPopup.addEventListener('mouseenter', () => clearTimeout(popupHoverTimeout));
         clusterPopup.addEventListener('mouseleave', () => { popupHoverTimeout = setTimeout(hideClusterPopup, 300); });
@@ -385,9 +384,6 @@
         map.attributionControl.addAttribution(ATTR.inat);
         setTimeout(updateAttributionOffset, 0);
 
-        // FIX A: map click hides cluster popup only after a short delay,
-        // allowing clusterclick (which fires just before map click on touch)
-        // to set a flag that cancels the hide.
         let suppressMapClick = false;
         map.on('click', () => {
             if (suppressMapClick) return;
@@ -429,31 +425,8 @@
             popupAnchor: new L.Point(0, -20)
         });
 
-        // FIX B: Cluster interactions
-        // Desktop: hover to show/hide cluster popup (unchanged from original)
-        // Mobile/touch: tap cluster → set suppressMapClick so the map click
-        //   that immediately follows on touch doesn't close the popup we just opened
-        if (isTouchDevice) {
-            // clusterclick is unreliable on mobile — use animationend to attach
-            // direct click listeners to each cluster marker element as they render
-            exactPointsLayer.on('animationend', () => {
-                document.querySelectorAll('.leaflet-marker-icon.marker-cluster').forEach(el => {
-                    if (el._clusterTapBound) return; // don't double-bind
-                    el._clusterTapBound = true;
-                    el.addEventListener('touchend', function(e) {
-                        e.stopPropagation();
-                        suppressMapClick = true;
-                        setTimeout(() => { suppressMapClick = false; }, 100);
-                        // Find the corresponding Leaflet layer for this DOM element
-                        exactPointsLayer.eachLayer(layer => {
-                            if (layer._icon === el) {
-                                showClusterPopup(layer.getAllChildMarkers(), map.latLngToContainerPoint(layer.getLatLng()));
-                            }
-                        });
-                    });
-                });
-            });
-        } else {
+        // Desktop: hover on clusters shows popup
+        if (!isTouchDevice) {
             exactPointsLayer.on('clustermouseover', e => {
                 clearTimeout(popupHoverTimeout);
                 showClusterPopup(e.layer.getAllChildMarkers(), map.latLngToContainerPoint(e.layer.getLatLng()));
@@ -463,12 +436,28 @@
             });
         }
 
-        // FIX C: Remove the map.on('popupopen') mouseleave handler entirely.
-        // It was causing a race condition where moving the mouse from a marker
-        // to its popup briefly triggered mouseout → close timer → popup closed
-        // before mouseenter on the popup could cancel it.
-        // Instead, individual markers handle their own open/close via mouseover/mouseout,
-        // and the popup's own mouseenter/mouseleave keeps it open when hovered directly.
+        // Mobile: intercept touchend on the map container directly —
+        // bypasses clusterclick entirely which is unreliable in markercluster
+        if (isTouchDevice) {
+            document.getElementById('map').addEventListener('touchend', function(e) {
+                const touch = e.changedTouches[0];
+                const el = document.elementFromPoint(touch.clientX, touch.clientY);
+                if (!el) return;
+                const icon = el.closest('.marker-cluster');
+                if (!icon) return;
+                // Find the MarkerCluster layer whose _icon matches this DOM element
+                let foundCluster = null;
+                exactPointsLayer.eachLayer(function(layer) {
+                    if (layer._icon === icon) foundCluster = layer;
+                });
+                if (!foundCluster) return;
+                e.preventDefault();
+                e.stopPropagation();
+                suppressMapClick = true;
+                setTimeout(() => { suppressMapClick = false; }, 100);
+                showClusterPopup(foundCluster.getAllChildMarkers(), map.latLngToContainerPoint(foundCluster.getLatLng()));
+            }, { passive: false });
+        }
 
         const layerGroups = { crow: L.layerGroup(), prow: L.layerGroup() };
         const layerLoaded = { crow: false, prow: false };
@@ -586,17 +575,12 @@
                         marker.observationData = { commonName, latinName, searchUrl };
 
                         if (isTouchDevice) {
-                            // FIX D: tap opens Leaflet popup; suppress the map click
-                            // that fires immediately after so it doesn't close it
                             marker.on('click', function() {
                                 suppressMapClick = true;
-                                setTimeout(() => { suppressMapClick = false; }, 50);
+                                setTimeout(() => { suppressMapClick = false; }, 100);
                                 this.openPopup();
                             });
                         } else {
-                            // FIX E: desktop hover — use the cluster popup div (not Leaflet popup)
-                            // so the common name/latin name appears in the same styled panel
-                            // as cluster hovers, avoiding the race condition with Leaflet's popup system
                             marker.on('mouseover', function() {
                                 clearTimeout(popupHoverTimeout);
                                 showClusterPopup([this], map.latLngToContainerPoint(this.getLatLng()));
