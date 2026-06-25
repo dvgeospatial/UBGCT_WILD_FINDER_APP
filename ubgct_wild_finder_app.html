@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nature Observations: Upper Bure Conservation Triangle</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" crossorigin=""/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" crossorigin=""/>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+    <style>
+        .osm-grayscale { filter: grayscale(100%) opacity(0.8); }
+        #cluster-popup {
+            position: absolute;
+            z-index: 1050;
+            min-width: 240px;
+            max-width: 300px;
+            max-height: 360px;
+            display: flex;
+            flex-direction: column;
+            background: rgba(255,255,255,0.97);
+            border: 1px solid #d1d5db;
+            border-radius: 14px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+            overflow: hidden;
+            transition: opacity 0.15s ease;
+            pointer-events: all;
+        }
+        #cluster-popup.hidden { display: none; }
+        #cluster-popup-list { overflow-y: auto; flex: 1; }
+        .leaflet-control-attribution {
+            font-size: 10px !important;
+            line-height: 1.5 !important;
+            background: rgba(255, 255, 255, 0.92) !important;
+            backdrop-filter: blur(4px);
+            padding: 4px 8px !important;
+            border-radius: 4px !important;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.12) !important;
+            max-width: 700px;
+            white-space: normal !important;
+            word-break: break-word;
+        }
+        .leaflet-control-attribution a { color: #406381 !important; text-decoration: underline; }
+        .leaflet-bottom.leaflet-right { transition: padding-right 300ms ease-in-out; }
+        .help-body { color: #406381; font-size: 0.95rem; line-height: 1.75; }
+        .help-body p { margin-bottom: 0; }
+        .help-body a {
+            color: #BCCB54;
+            font-weight: 700;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+            transition: color 0.15s ease;
+        }
+        .help-body a:hover { color: #a8b847; }
+        .help-subheading {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #406381;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.01em;
+        }
+        .help-divider { border: none; border-top: 1px solid rgba(64, 99, 129, 0.2); margin: 0; }
+        .panel-section-label { font-size: 0.95rem; font-weight: 600; color: #406381; margin-bottom: 0.75rem; }
+        .taxon-label, .access-label {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #406381;
+            cursor: pointer;
+            padding: 0.5rem 0.625rem;
+            margin-left: -0.5rem;
+            border-radius: 0.5rem;
+            transition: background 0.15s ease, color 0.15s ease;
+            line-height: 1.4;
+        }
+        .taxon-label:hover, .access-label:hover { background-color: rgba(188, 203, 84, 0.15); color: #2f4a60; }
+        .taxon-label:has(input[type="radio"]:checked), .access-label:has(input[type="checkbox"]:checked) { background-color: rgba(188, 203, 84, 0.18); color: #2f4a60; }
+        .taxon-label input[type="radio"], .access-label input[type="checkbox"] {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 1.1rem;
+            height: 1.1rem;
+            border: 2px solid #406381;
+            flex-shrink: 0;
+            position: relative;
+            cursor: pointer;
+            transition: border-color 0.15s ease, background 0.15s ease;
+        }
+        .taxon-label input[type="radio"] { border-radius: 50%; }
+        .access-label input[type="checkbox"] { border-radius: 0.25rem; }
+        .taxon-label input[type="radio"]:checked, .access-label input[type="checkbox"]:checked { border-color: #BCCB54; background-color: #BCCB54; }
+        .taxon-label input[type="radio"]:focus-visible, .access-label input[type="checkbox"]:focus-visible { outline: 2px solid #BCCB54; outline-offset: 2px; }
+        .taxon-label input[type="radio"]:checked::after {
+            content: '';
+            position: absolute;
+            inset: 3px;
+            background: #fff;
+            border-radius: 50%;
+        }
+        .access-label input[type="checkbox"]:checked::after {
+            content: '';
+            position: absolute;
+            top: 1px;
+            left: 4px;
+            width: 5px;
+            height: 9px;
+            border: 2px solid #fff;
+            border-top: none;
+            border-left: none;
+            transform: rotate(45deg);
+        }
+        .access-spinner { margin-left: auto; flex-shrink: 0; width: 1rem; height: 1rem; color: #BCCB54; }
+        #wisefrog-footer {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 0.5rem;
+            padding: 1rem 1.5rem 1.25rem;
+            border-top: 1px solid rgba(64, 99, 129, 0.12);
+            margin-top: 1.5rem;
+        }
+        #wisefrog-footer span {
+            font-size: 0.65rem;
+            font-weight: 600;
+            color: #406381;
+            opacity: 0.5;
+            letter-spacing: 0.02em;
+            white-space: nowrap;
+            line-height: 1;
+        }
+        #wisefrog-footer img { height: 28px; width: auto; display: block; opacity: 0.6; transition: opacity 0.15s ease; }
+        #wisefrog-footer:hover span { opacity: 0.85; }
+        #wisefrog-footer:hover img { opacity: 1; }
+    </style>
+</head>
+<body class="m-0 p-0 antialiased overflow-hidden h-screen w-screen relative font-sans text-gray-800">
+
+    <button id="open-panel-btn" class="absolute top-4 right-4 z-[999] bg-white/95 backdrop-blur p-2.5 rounded-lg shadow-md text-emerald-800 hover:bg-gray-50 hidden transition-all border border-gray-200" aria-label="Open Menu">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+    </button>
+
+    <div id="control-panel" class="absolute top-0 right-0 z-[1000] h-screen w-[360px] bg-white/95 backdrop-blur-md shadow-2xl border-l border-gray-200 overflow-y-auto transition-transform duration-300 ease-in-out translate-x-0">
+        <button id="close-panel-btn" class="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-800 transition-colors bg-white/50 rounded-full" aria-label="Close Menu">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+
+        <div class="p-6 pt-12">
+            <div class="mb-6 pb-6 border-b border-gray-100">
+                <img src="https://static.wixstatic.com/media/06d014_0eae07168ee2445f9c6c5dfa48e1a9ea~mv2.jpg/v1/fill/w_314,h_245,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/Upper%20Bure%20%26%20Glaven%20logo_edited.jpg" alt="Upper Bure & Glaven Logo" class="w-full object-contain rounded">
+            </div>
+
+            <h2 class="text-2xl font-bold mb-4 text-[#406381] text-center">Wild Finder App</h2>
+
+            <div class="mb-6">
+                <button id="help-info-btn" class="w-full flex items-center justify-center gap-2 text-white font-bold px-4 py-3 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors" style="background-color:#BCCB54;" aria-label="Open help and information" onmouseover="this.style.backgroundColor='#a8b847'" onmouseout="this.style.backgroundColor='#BCCB54'">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 1.918-2 3.522-2 2.21 0 4 1.343 4 3 0 1.34-1.172 2.475-2.786 2.87-.897.22-1.214.55-1.214 1.13V15m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    Help and Information
+                </button>
+            </div>
+
+            <div class="border-t border-gray-200 pt-5">
+                <p class="panel-section-label">Wildlife group (Iconic Taxa)</p>
+                <div class="space-y-0.5" id="taxon-radios"></div>
+            </div>
+
+            <div class="border-t border-gray-200 pt-5 mt-5">
+                <p class="panel-section-label">Public Access</p>
+                <div class="space-y-0.5" id="access-toggles"></div>
+            </div>
+        </div>
+
+        <div id="wisefrog-footer">
+            <span>smart mapping by wisefrog</span>
+            <a href="https://www.wisefrog.co.uk" target="_blank" rel="noopener noreferrer" aria-label="Wise Frog Limited">
+                <img src="https://tourmaline-pudding-0fce6c.netlify.app/assets/logos/frog_best.svg" alt="WiseFrog logo">
+            </a>
+        </div>
+    </div>
+
+    <div id="cluster-popup" class="hidden">
+        <div class="flex items-center justify-between gap-3 px-4 py-3 border-b border-gray-100 flex-shrink-0">
+            <div>
+                <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">Cluster Records</p>
+                <p id="cluster-popup-summary" class="text-sm font-semibold text-emerald-800 mt-0.5"></p>
+            </div>
+            <button id="cluster-popup-close" class="p-1.5 text-gray-400 hover:text-gray-700 rounded-full hover:bg-gray-100 transition-colors flex-shrink-0" aria-label="Close">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+        </div>
+        <div id="cluster-popup-list" class="px-3 py-2 space-y-1.5"></div>
+    </div>
+
+    <div id="help-modal" class="fixed inset-0 z-[1100] hidden" aria-hidden="true">
+        <div id="help-modal-backdrop" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+        <div class="absolute inset-0 flex items-center justify-center p-4 sm:p-6">
+            <div role="dialog" aria-modal="true" aria-labelledby="help-modal-title" class="relative w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl bg-white shadow-2xl border border-gray-200">
+                <div class="sticky top-0 bg-white/95 backdrop-blur border-b px-6 py-5 flex items-start justify-between gap-4" style="border-color: rgba(64,99,129,0.2);">
+                    <div class="flex-1 text-center"><h3 id="help-modal-title" class="text-xl font-bold text-[#406381]">Welcome to the Wild Finder App!</h3></div>
+                    <button id="close-help-modal-btn" class="p-2 hover:bg-blue-50 transition-colors rounded-full flex-shrink-0" style="color:#406381;" aria-label="Close">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+                <div class="px-6 py-6 space-y-0 help-body">
+                    <section class="pb-5">
+                        <h4 class="help-subheading">Discover the Biodiversity of the Upper Bure & Glaven Conservation Triangle</h4>
+                        <p>A growing community of nature lovers have used <a href="https://uk.inaturalist.org/pages/about-uk" target="_blank" rel="noopener noreferrer">iNaturalist</a> to log a remarkable diversity of wildlife across the Upper Bure & Glaven Conservation Triangle. Use this <strong>Wild Finder App</strong>  to browse their observations on the map. To get started, use the menu on the right to select a wildlife group that interests you — choose from birds, insects, plants, fungi, mammals and more to see wildlife observations recorded by people using the <a href="https://uk.inaturalist.org/pages/about-uk" target="_blank" rel="noopener noreferrer">iNaturalist</a> app. At the initial zoom level the map displays a dark blue grid showing where sightings for your chosen wildife group are concentrated across the area. As you zoom in close using your mouse wheel or the +/- buttons and individual sighting markers will appear; hover over any marker to see the common and scientific name of species recorded there. Click the scientific name to open a species search and find out more.</p>
+                    </section>
+                    <hr class="help-divider">
+                    <section class="pt-5 pb-5">
+                        <h4 class="help-subheading">Plan Your Nature Adventure</h4>
+                        <p>Why not go and see for yourself! To plan your nature walk, tick the Public Rights of Way box to see footpaths, bridleways and byways overlaid on the map, or tick the CRoW Access Land box to reveal areas of open countryside where you have the legal right to roam freely. You can open and close the side panel using the menu button if you want a fuller view of the map.</p>
+                    </section>
+                    <hr class="help-divider">
+                    <section class="pt-5">
+                        <h4 class="help-subheading">Become a Citizen Scientist</h4>
+                        <p>Nature needs you — and you don't have to be an expert to make an important difference! By downloading the free <a href="https://uk.inaturalist.org/pages/about-uk" target="_blank" rel="noopener noreferrer">iNaturalist</a> app on your smartphone, you can record the plants and animals you encounter on your walks. Every photo you snap and share helps us understand and protect our local environment. Best of all, your own discoveries will appear on this map for everyone else to see!</p>
+                    </section>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="map" class="absolute inset-0 z-0"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <script src="https://unpkg.com/esri-leaflet/dist/esri-leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js" crossorigin=""></script>
+
+    <script>
+        const COLOUR_LIGHT_GREEN = '#BCCB54';
+        const COLOUR_DARK_BLUE = '#406381';
+        const PANEL_WIDTH = 360;
+        const POINTS_ZOOM_THRESHOLD = 17; // zoom >= this shows points; below this shows grid
+
+        const taxonOptions = [
+            ['47158', 'Insects'], ['3', 'Birds'], ['47126', 'Plants'], ['47170', 'Fungi'], ['40151', 'Mammals'],
+            ['20978', 'Amphibians'], ['26036', 'Reptiles'], ['47178', 'Fish'], ['47119', 'Arachnids'],
+            ['47184', 'Crustaceans'], ['47115', 'Molluscs']
+        ];
+        const accessOptions = [
+            ['crow', 'Countryside Rights of Way (CRoW) Access Land'],
+            ['prow', 'Public Rights of Way']
+        ];
+        const spinnerSvg = `<svg class="access-spinner animate-spin hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+
+        document.getElementById('taxon-radios').innerHTML = taxonOptions.map(([value, label], i) =>
+            `<label class="taxon-label"><input type="radio" name="taxon" value="${value}"${i ? '' : ' checked'}><span>${label}</span></label>`
+        ).join('');
+        document.getElementById('access-toggles').innerHTML = accessOptions.map(([id, label]) =>
+            `<label class="access-label"><input type="checkbox" id="toggle-${id}"><span>${label}</span>${spinnerSvg.replace('class="access-spinner', `id="${id}-loading-spinner" class="access-spinner`)}</label>`
+        ).join('');
+
+        const ATTR = {
+            crow: '© <a href="https://www.gov.uk/government/organisations/natural-england" target="_blank" rel="noopener">Natural England</a> (CRoW Act 2000 open access land) | Contains OS data © Crown copyright and database right 2026 | <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" target="_blank" rel="noopener">OGL v3.0</a>',
+            prow: '© <a href="https://www.norfolk.gov.uk" target="_blank" rel="noopener">Norfolk County Council</a> (Public Rights of Way) | Contains OS data © Crown copyright and database right 2026 OS 100019340 | <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" target="_blank" rel="noopener">OGL v3.0</a>',
+            inat: 'Observation data © <a href="https://www.inaturalist.org" target="_blank" rel="noopener">iNaturalist</a> contributors'
+        };
+
+        function openGooglePopup(url) {
+            const existing = document.getElementById('google-search-popup');
+            if (existing) existing.remove();
+            const overlay = document.createElement('div');
+            overlay.id = 'google-search-popup';
+            overlay.style.cssText = 'position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;pointer-events:none;';
+            overlay.innerHTML = `
+                <div style="position:relative;width:min(900px,92vw);height:80vh;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,0.25);display:flex;flex-direction:column;pointer-events:all;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #e5e7eb;flex-shrink:0;background:#fff;">
+                        <span style="font-size:13px;font-weight:600;color:#406381;">Species Search</span>
+                        <button id="google-popup-close" style="padding:6px;border-radius:9999px;border:none;background:#f3f4f6;cursor:pointer;display:flex;align-items:center;justify-content:center;" aria-label="Close">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                    <iframe src="${url}" style="flex:1;border:none;width:100%;" title="Species Search"></iframe>
+                </div>`;
+            document.body.appendChild(overlay);
+            overlay.querySelector('#google-popup-close').addEventListener('click', () => overlay.remove());
+            document.addEventListener('keydown', function escClose(e) {
+                if (e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', escClose); }
+            });
+        }
+
+        const panel = document.getElementById('control-panel');
+        const openBtn = document.getElementById('open-panel-btn');
+        const clusterPopup = document.getElementById('cluster-popup');
+        const clusterPopupSummary = document.getElementById('cluster-popup-summary');
+        const clusterPopupList = document.getElementById('cluster-popup-list');
+
+        function updateAttributionOffset() {
+            const container = document.querySelector('.leaflet-bottom.leaflet-right');
+            if (container) container.style.paddingRight = (!panel.classList.contains('translate-x-full') ? PANEL_WIDTH : 0) + 'px';
+        }
+
+        openBtn.addEventListener('click', () => {
+            panel.classList.remove('translate-x-full');
+            openBtn.classList.add('hidden');
+            updateAttributionOffset();
+        });
+        document.getElementById('close-panel-btn').addEventListener('click', () => {
+            panel.classList.add('translate-x-full');
+            openBtn.classList.remove('hidden');
+            updateAttributionOffset();
+        });
+
+        const helpModal = document.getElementById('help-modal');
+        document.getElementById('help-info-btn').addEventListener('click', () => {
+            helpModal.classList.remove('hidden');
+            helpModal.setAttribute('aria-hidden', 'false');
+        });
+        ['close-help-modal-btn', 'help-modal-backdrop'].forEach(id => document.getElementById(id).addEventListener('click', () => {
+            helpModal.classList.add('hidden');
+            helpModal.setAttribute('aria-hidden', 'true');
+        }));
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape' && !helpModal.classList.contains('hidden')) {
+                helpModal.classList.add('hidden');
+                helpModal.setAttribute('aria-hidden', 'true');
+            }
+        });
+
+        function hideClusterPopup() { clusterPopup.classList.add('hidden'); }
+        function repositionClusterPopup(anchorPx) {
+            const mapEl = document.getElementById('map');
+            const mapW = mapEl.offsetWidth, mapH = mapEl.offsetHeight;
+            const popW = clusterPopup.offsetWidth, popH = clusterPopup.offsetHeight;
+            const TAIL = 16, MARGIN = 10;
+            let left = anchorPx.x - popW / 2, top = anchorPx.y - popH - TAIL;
+            if (top < MARGIN) top = anchorPx.y + TAIL + 20;
+            const rightBound = !panel.classList.contains('translate-x-full') ? mapW - PANEL_WIDTH - MARGIN : mapW - MARGIN;
+            left = Math.max(MARGIN, Math.min(left, rightBound - popW));
+            top = Math.max(MARGIN, Math.min(top, mapH - popH - MARGIN));
+            clusterPopup.style.left = left + 'px';
+            clusterPopup.style.top = top + 'px';
+        }
+        function showClusterPopup(markers, pixelPoint) {
+            const records = markers.map(m => m.observationData).filter(Boolean)
+                .sort((a, b) => (a.commonName || '').toLowerCase().localeCompare((b.commonName || '').toLowerCase()));
+            clusterPopupSummary.textContent = `${records.length} record${records.length === 1 ? '' : 's'}`;
+            clusterPopupList.innerHTML = records.map(r => `
+                <div class="flex items-center gap-2 py-1.5 border-b border-gray-100 last:border-0">
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm font-semibold text-emerald-800 truncate">${r.commonName}</div>
+                        <div class="text-xs italic text-gray-500 truncate">
+                            <a href="#" onclick="openGooglePopup('${r.searchUrl}'); return false;" class="text-blue-600 hover:text-blue-800 underline cursor-pointer">${r.latinName}</a>
+                        </div>
+                    </div>
+                </div>`).join('');
+            clusterPopup.style.left = clusterPopup.style.top = '-9999px';
+            clusterPopup.classList.remove('hidden');
+            repositionClusterPopup(pixelPoint);
+        }
+
+        document.getElementById('cluster-popup-close').addEventListener('click', hideClusterPopup);
+        let popupHoverTimeout;
+        clusterPopup.addEventListener('mouseenter', () => clearTimeout(popupHoverTimeout));
+        clusterPopup.addEventListener('mouseleave', () => { popupHoverTimeout = setTimeout(hideClusterPopup, 200); });
+
+        const map = L.map('map', { preferCanvas: true, zoomSnap: 0.1, zoomDelta: 0.5 });
+        map.attributionControl.setPrefix('');
+        map.attributionControl.addAttribution(ATTR.inat);
+        setTimeout(updateAttributionOffset, 0);
+        map.on('click', hideClusterPopup);
+        map.on('dragstart', hideClusterPopup);
+        map.on('zoomstart', hideClusterPopup);
+
+        [['pane-crow', 441], ['pane-prow', 442], ['maskPane', 450], ['boundaryPane', 460]].forEach(([name, z]) => {
+            map.createPane(name);
+            map.getPane(name).style.zIndex = z;
+        });
+        map.getPane('maskPane').style.pointerEvents = 'none';
+        map.getPane('boundaryPane').style.pointerEvents = 'none';
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors',
+            className: 'osm-grayscale'
+        }).addTo(map);
+
+        let taxonId = 47158, activePolygonFeature = null, polygonBounds = null, currentGridLayer = null, debounceTimer;
+        const mappedObsIds = new Set();
+        const gridTilesLayer = L.layerGroup().addTo(map);
+
+        const exactPointsLayer = L.markerClusterGroup({
+            spiderfyOnMaxZoom: false,
+            showCoverageOnHover: false,
+            zoomToBoundsOnClick: false,
+            maxClusterRadius: 50,
+            spiderfyDistanceMultiplier: 1.8
+        });
+        const singlePointClusterIcon = L.divIcon({
+            html: '<div><span>1</span></div>',
+            className: 'marker-cluster marker-cluster-small',
+            iconSize: new L.Point(40, 40),
+            iconAnchor: new L.Point(20, 20),
+            popupAnchor: new L.Point(0, -20)
+        });
+
+        exactPointsLayer.on('clustermouseover', e => {
+            clearTimeout(popupHoverTimeout);
+            showClusterPopup(e.layer.getAllChildMarkers(), map.latLngToContainerPoint(e.layer.getLatLng()));
+        });
+        exactPointsLayer.on('clustermouseout', () => { popupHoverTimeout = setTimeout(hideClusterPopup, 200); });
+        map.on('popupopen', e => {
+            const popupNode = e.popup.getElement();
+            if (popupNode) {
+                popupNode.addEventListener('mouseenter', () => clearTimeout(popupHoverTimeout));
+                popupNode.addEventListener('mouseleave', () => { popupHoverTimeout = setTimeout(() => map.closePopup(), 200); });
+            }
+        });
+
+        const layerGroups = { crow: L.layerGroup(), prow: L.layerGroup() };
+        const layerLoaded = { crow: false, prow: false };
+        const layerConfig = {
+            crow: {
+                spinner: 'crow-loading-spinner',
+                url: 'https://services.arcgis.com/JJzESW51TqeY9uat/arcgis/rest/services/CRoW_Act_2000_Section_4_Conclusive_Registered_Common_Land/FeatureServer/0',
+                pane: 'pane-crow',
+                style: { color: '#e67e22', weight: 1, fillColor: '#e67e22', fillOpacity: 0.5 },
+                popup: "<div class='font-sans text-sm'><div class='font-bold text-emerald-800'>CRoW Access Land</div></div>"
+            },
+            prow: {
+                spinner: 'prow-loading-spinner',
+                url: 'https://maps.norfolk.gov.uk/arcgis/rest/services/layers_ext/highways/MapServer/2',
+                pane: 'pane-prow',
+                style: { color: '#ff00c5', weight: 2.5, opacity: 1 },
+                popup: "<div class='font-sans text-sm'><div class='font-bold text-emerald-800'>Public Right of Way</div></div>"
+            }
+        };
+
+        function loadAccessLayer(type) {
+            if (!activePolygonFeature || layerLoaded[type]) return;
+            const cfg = layerConfig[type], spinner = document.getElementById(cfg.spinner);
+            spinner.classList.remove('hidden');
+            const query = L.esri.query({ url: cfg.url });
+            query.intersects(polygonBounds);
+            query.params.outSR = 4326;
+            query.run((error, featureCollection) => {
+                spinner.classList.add('hidden');
+                if (error) return console.error(`${type.toUpperCase()} Query error:`, error);
+                const validFeatures = (featureCollection.features || []).filter(f => {
+                    try { return f.geometry && turf.booleanIntersects(f, activePolygonFeature); } catch (e) { return false; }
+                });
+                if (validFeatures.length > 0) {
+                    L.geoJSON(validFeatures, {
+                        pane: cfg.pane,
+                        style: cfg.style,
+                        onEachFeature: (f, l) => l.bindPopup(cfg.popup)
+                    }).addTo(layerGroups[type]);
+                }
+                layerLoaded[type] = true;
+            });
+        }
+
+        ['crow', 'prow'].forEach(type => document.getElementById(`toggle-${type}`).addEventListener('change', e => {
+            if (e.target.checked) {
+                map.addLayer(layerGroups[type]);
+                map.attributionControl.addAttribution(ATTR[type]);
+                loadAccessLayer(type);
+            } else {
+                map.removeLayer(layerGroups[type]);
+                map.attributionControl.removeAttribution(ATTR[type]);
+            }
+        }));
+
+        fetch('https://firebasestorage.googleapis.com/v0/b/naturecitynorwich.firebasestorage.app/o/Assets%2FUpper%20Bure%20Conservation%20Triangle.geojson?alt=media&token=3a806326-ab79-4317-a2ad-7e5804628a25')
+            .then(res => res.json())
+            .then(geojsonData => {
+                activePolygonFeature = geojsonData.type === 'FeatureCollection' ? geojsonData.features[0] : geojsonData;
+                const boundaryGeom = activePolygonFeature.geometry;
+                const worldRectangle = [[-180, -90], [-180, 90], [180, 90], [180, -90], [-180, -90]];
+                const maskPolygons = boundaryGeom.type === 'Polygon' ? [boundaryGeom.coordinates] : boundaryGeom.coordinates;
+                L.geoJSON({ type: 'Feature', geometry: { type: 'MultiPolygon', coordinates: [[worldRectangle], ...maskPolygons] } }, {
+                    style: { fillColor: '#ffffff', fillOpacity: 0.85, stroke: false, fillRule: 'evenodd' },
+                    pane: 'maskPane'
+                }).addTo(map);
+                const boundaryLayer = L.geoJSON(activePolygonFeature, {
+                    style: { color: COLOUR_DARK_BLUE, weight: 3, fill: false },
+                    pane: 'boundaryPane'
+                }).addTo(map);
+                polygonBounds = boundaryLayer.getBounds();
+                map.fitBounds(polygonBounds, { paddingBottomRight: [PANEL_WIDTH, 0], paddingTopLeft: [20, 20] });
+                refreshGridLayer();
+            })
+            .catch(err => console.error('Failed to load boundary GeoJSON:', err));
+
+        function refreshGridLayer() {
+            if (!polygonBounds) return;
+            if (currentGridLayer) gridTilesLayer.removeLayer(currentGridLayer);
+            const sw = polygonBounds.getSouthWest(), ne = polygonBounds.getNorthEast();
+            currentGridLayer = L.tileLayer(
+                `https://api.inaturalist.org/v1/grid/{z}/{x}/{y}.png?taxon_id=${taxonId}&color=%23406381&swlat=${sw.lat}&swlng=${sw.lng}&nelat=${ne.lat}&nelng=${ne.lng}`,
+                { minZoom: 0, maxZoom: 19, opacity: 1 } // maxZoom: 19 — moveend logic controls visibility, not this cap
+            );
+            gridTilesLayer.addLayer(currentGridLayer);
+        }
+
+        async function fetchPointsForCurrentView() {
+            if (!activePolygonFeature) return;
+            const b = map.getBounds();
+            const fields = '(id:!t,location:!t,taxon:(name:!t,preferred_common_name:!t))';
+            const apiUrl = `https://api.inaturalist.org/v2/observations?taxon_id=${taxonId}&swlat=${b.getSouthWest().lat}&swlng=${b.getSouthWest().lng}&nelat=${b.getNorthEast().lat}&nelng=${b.getNorthEast().lng}&per_page=200&fields=${fields}`;
+            try {
+                const response = await fetch(apiUrl), data = await response.json();
+                if (data.results) data.results.forEach(obs => {
+                    if (mappedObsIds.has(obs.id) || !obs.location) return;
+                    const lat = parseFloat(obs.location.split(',')[0]), lng = parseFloat(obs.location.split(',')[1]);
+                    if (!isNaN(lat) && !isNaN(lng) && turf.booleanPointInPolygon(turf.point([lng, lat]), activePolygonFeature)) {
+                        const commonName = obs.taxon?.preferred_common_name || 'Unknown Species';
+                        const latinName = obs.taxon?.name || 'Unknown';
+                        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(latinName)}`;
+                        const popupHtml = `
+                            <div class="font-sans text-center min-w-[140px] px-1 py-1">
+                                <div class="font-bold text-sm text-emerald-800">${commonName}</div>
+                                <div class="text-xs mt-1.5">
+                                    <a href="#" onclick="openGooglePopup('${searchUrl}'); return false;" class="text-blue-600 hover:text-blue-800 underline italic transition-colors">${latinName}</a>
+                                </div>
+                            </div>`;
+                        const marker = L.marker([lat, lng], { icon: singlePointClusterIcon })
+                            .bindPopup(popupHtml, { autoPan: false })
+                            .addTo(exactPointsLayer);
+                        marker.observationData = { commonName, latinName, searchUrl };
+                        marker.on('mouseover', function() { clearTimeout(popupHoverTimeout); this.openPopup(); });
+                        marker.on('mouseout', function() { popupHoverTimeout = setTimeout(() => this.closePopup(), 200); });
+                        marker.on('click', hideClusterPopup);
+                        mappedObsIds.add(obs.id);
+                    }
+                });
+            } catch (err) { console.error(err); }
+        }
+
+        map.on('moveend', () => {
+            clearTimeout(debounceTimer);
+            if (map.getZoom() >= POINTS_ZOOM_THRESHOLD) {
+                if (map.hasLayer(gridTilesLayer)) map.removeLayer(gridTilesLayer);
+                if (!map.hasLayer(exactPointsLayer)) exactPointsLayer.addTo(map);
+                debounceTimer = setTimeout(fetchPointsForCurrentView, 300);
+            } else {
+                if (map.hasLayer(exactPointsLayer)) map.removeLayer(exactPointsLayer);
+                if (!map.hasLayer(gridTilesLayer)) gridTilesLayer.addTo(map);
+                refreshGridLayer();
+                hideClusterPopup();
+            }
+        });
+
+        document.querySelectorAll('input[name="taxon"]').forEach(radio => radio.addEventListener('change', e => {
+            taxonId = e.target.value;
+            mappedObsIds.clear();
+            exactPointsLayer.clearLayers();
+            hideClusterPopup();
+            refreshGridLayer();
+            map.fire('moveend');
+        }));
+    </script>
+</body>
+</html>
