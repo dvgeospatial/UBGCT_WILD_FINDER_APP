@@ -434,11 +434,24 @@
         // Mobile/touch: tap cluster → set suppressMapClick so the map click
         //   that immediately follows on touch doesn't close the popup we just opened
         if (isTouchDevice) {
-            exactPointsLayer.on('clusterclick', e => {
-                suppressMapClick = true;
-                // Reset flag after the map click event has had time to fire
-                setTimeout(() => { suppressMapClick = false; }, 50);
-                showClusterPopup(e.layer.getAllChildMarkers(), map.latLngToContainerPoint(e.layer.getLatLng()));
+            // clusterclick is unreliable on mobile — use animationend to attach
+            // direct click listeners to each cluster marker element as they render
+            exactPointsLayer.on('animationend', () => {
+                document.querySelectorAll('.leaflet-marker-icon.marker-cluster').forEach(el => {
+                    if (el._clusterTapBound) return; // don't double-bind
+                    el._clusterTapBound = true;
+                    el.addEventListener('touchend', function(e) {
+                        e.stopPropagation();
+                        suppressMapClick = true;
+                        setTimeout(() => { suppressMapClick = false; }, 100);
+                        // Find the corresponding Leaflet layer for this DOM element
+                        exactPointsLayer.eachLayer(layer => {
+                            if (layer._icon === el) {
+                                showClusterPopup(layer.getAllChildMarkers(), map.latLngToContainerPoint(layer.getLatLng()));
+                            }
+                        });
+                    });
+                });
             });
         } else {
             exactPointsLayer.on('clustermouseover', e => {
