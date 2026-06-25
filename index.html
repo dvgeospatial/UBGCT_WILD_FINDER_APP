@@ -6,8 +6,8 @@
     <title>Nature Observations: Upper Bure Conservation Triangle</title>
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" crossorigin=""/>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" crossorigin=""/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" crossorigin=""/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" crossorigin=""/>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
@@ -138,10 +138,7 @@
         #wisefrog-footer:hover img { opacity: 1; }
 
         @media (max-width: 767px) {
-            #control-panel {
-                width: 100% !important;
-                max-width: 360px;
-            }
+            #control-panel { width: 100% !important; max-width: 360px; }
             #cluster-popup {
                 position: fixed !important;
                 bottom: 80px !important;
@@ -174,27 +171,22 @@
             <div class="mb-6 pb-6 border-b border-gray-100">
                 <img src="https://static.wixstatic.com/media/06d014_0eae07168ee2445f9c6c5dfa48e1a9ea~mv2.jpg/v1/fill/w_314,h_245,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/Upper%20Bure%20%26%20Glaven%20logo_edited.jpg" alt="Upper Bure & Glaven Logo" class="w-full object-contain rounded">
             </div>
-
             <h2 class="text-2xl font-bold mb-4 text-[#406381] text-center">Wild Finder App</h2>
-
             <div class="mb-6">
                 <button id="help-info-btn" class="w-full flex items-center justify-center gap-2 text-white font-bold px-4 py-3 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors" style="background-color:#BCCB54;" aria-label="Open help and information" onmouseover="this.style.backgroundColor='#a8b847'" onmouseout="this.style.backgroundColor='#BCCB54'">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 1.918-2 3.522-2 2.21 0 4 1.343 4 3 0 1.34-1.172 2.475-2.786 2.87-.897.22-1.214.55-1.214 1.13V15m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     Help and Information
                 </button>
             </div>
-
             <div class="border-t border-gray-200 pt-5">
                 <p class="panel-section-label">Wildlife group (Iconic Taxa)</p>
                 <div class="space-y-0.5" id="taxon-radios"></div>
             </div>
-
             <div class="border-t border-gray-200 pt-5 mt-5">
                 <p class="panel-section-label">Public Access</p>
                 <div class="space-y-0.5" id="access-toggles"></div>
             </div>
         </div>
-
         <div id="wisefrog-footer">
             <span>smart mapping by wisefrog</span>
             <a href="https://www.wisefrog.co.uk" target="_blank" rel="noopener noreferrer" aria-label="Wise Frog Limited">
@@ -250,10 +242,9 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <script src="https://unpkg.com/esri-leaflet/dist/esri-leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js" crossorigin=""></script>
 
     <script>
-        const COLOUR_LIGHT_GREEN = '#BCCB54';
         const COLOUR_DARK_BLUE = '#406381';
         const PANEL_WIDTH = 360;
         const POINTS_ZOOM_THRESHOLD = 17;
@@ -262,21 +253,21 @@
         const isMobile = window.innerWidth < 768;
 
         const taxonOptions = [
-            ['47158', 'Insects'], ['3', 'Birds'], ['47126', 'Plants'], ['47170', 'Fungi'], ['40151', 'Mammals'],
-            ['20978', 'Amphibians'], ['26036', 'Reptiles'], ['47178', 'Fish'], ['47119', 'Arachnids'],
-            ['47184', 'Crustaceans'], ['47115', 'Molluscs']
+            ['47158','Insects'],['3','Birds'],['47126','Plants'],['47170','Fungi'],['40151','Mammals'],
+            ['20978','Amphibians'],['26036','Reptiles'],['47178','Fish'],['47119','Arachnids'],
+            ['47184','Crustaceans'],['47115','Molluscs']
         ];
         const accessOptions = [
-            ['crow', 'Countryside Rights of Way (CRoW) Access Land'],
-            ['prow', 'Public Rights of Way']
+            ['crow','Countryside Rights of Way (CRoW) Access Land'],
+            ['prow','Public Rights of Way']
         ];
         const spinnerSvg = `<svg class="access-spinner animate-spin hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
 
-        document.getElementById('taxon-radios').innerHTML = taxonOptions.map(([value, label], i) =>
-            `<label class="taxon-label"><input type="radio" name="taxon" value="${value}"${i ? '' : ' checked'}><span>${label}</span></label>`
+        document.getElementById('taxon-radios').innerHTML = taxonOptions.map(([v,l],i) =>
+            `<label class="taxon-label"><input type="radio" name="taxon" value="${v}"${i?'':' checked'}><span>${l}</span></label>`
         ).join('');
-        document.getElementById('access-toggles').innerHTML = accessOptions.map(([id, label]) =>
-            `<label class="access-label"><input type="checkbox" id="toggle-${id}"><span>${label}</span>${spinnerSvg.replace('class="access-spinner', `id="${id}-loading-spinner" class="access-spinner`)}</label>`
+        document.getElementById('access-toggles').innerHTML = accessOptions.map(([id,label]) =>
+            `<label class="access-label"><input type="checkbox" id="toggle-${id}"><span>${label}</span>${spinnerSvg.replace('class="access-spinner',`id="${id}-loading-spinner" class="access-spinner`)}</label>`
         ).join('');
 
         const ATTR = {
@@ -285,9 +276,7 @@
             inat: 'Observation data © <a href="https://www.inaturalist.org" target="_blank" rel="noopener">iNaturalist</a> contributors'
         };
 
-        function openGooglePopup(url) {
-            window.open(url, '_blank', 'noopener,noreferrer');
-        }
+        function openGooglePopup(url) { window.open(url,'_blank','noopener,noreferrer'); }
 
         const panel = document.getElementById('control-panel');
         const openBtn = document.getElementById('open-panel-btn');
@@ -295,7 +284,6 @@
         const clusterPopupSummary = document.getElementById('cluster-popup-summary');
         const clusterPopupList = document.getElementById('cluster-popup-list');
 
-        // Panel init: hidden on mobile, open on desktop
         if (isMobile) {
             panel.classList.add('translate-x-full');
             openBtn.style.display = 'flex';
@@ -305,38 +293,18 @@
         }
 
         function isPanelOpen() { return !panel.classList.contains('translate-x-full'); }
-
         function updateAttributionOffset() {
-            const container = document.querySelector('.leaflet-bottom.leaflet-right');
-            if (container) container.style.paddingRight = (isPanelOpen() && !isMobile ? PANEL_WIDTH : 0) + 'px';
+            const c = document.querySelector('.leaflet-bottom.leaflet-right');
+            if (c) c.style.paddingRight = (isPanelOpen() && !isMobile ? PANEL_WIDTH : 0) + 'px';
         }
 
-        openBtn.addEventListener('click', () => {
-            panel.classList.remove('translate-x-full');
-            openBtn.style.display = 'none';
-            updateAttributionOffset();
-        });
-        document.getElementById('close-panel-btn').addEventListener('click', () => {
-            panel.classList.add('translate-x-full');
-            openBtn.style.display = 'flex';
-            updateAttributionOffset();
-        });
+        openBtn.addEventListener('click', () => { panel.classList.remove('translate-x-full'); openBtn.style.display = 'none'; updateAttributionOffset(); });
+        document.getElementById('close-panel-btn').addEventListener('click', () => { panel.classList.add('translate-x-full'); openBtn.style.display = 'flex'; updateAttributionOffset(); });
 
         const helpModal = document.getElementById('help-modal');
-        document.getElementById('help-info-btn').addEventListener('click', () => {
-            helpModal.classList.remove('hidden');
-            helpModal.setAttribute('aria-hidden', 'false');
-        });
-        ['close-help-modal-btn', 'help-modal-backdrop'].forEach(id => document.getElementById(id).addEventListener('click', () => {
-            helpModal.classList.add('hidden');
-            helpModal.setAttribute('aria-hidden', 'true');
-        }));
-        document.addEventListener('keydown', e => {
-            if (e.key === 'Escape' && !helpModal.classList.contains('hidden')) {
-                helpModal.classList.add('hidden');
-                helpModal.setAttribute('aria-hidden', 'true');
-            }
-        });
+        document.getElementById('help-info-btn').addEventListener('click', () => { helpModal.classList.remove('hidden'); helpModal.setAttribute('aria-hidden','false'); });
+        ['close-help-modal-btn','help-modal-backdrop'].forEach(id => document.getElementById(id).addEventListener('click', () => { helpModal.classList.add('hidden'); helpModal.setAttribute('aria-hidden','true'); }));
+        document.addEventListener('keydown', e => { if (e.key==='Escape' && !helpModal.classList.contains('hidden')) { helpModal.classList.add('hidden'); helpModal.setAttribute('aria-hidden','true'); } });
 
         function hideClusterPopup() { clusterPopup.classList.add('hidden'); }
 
@@ -357,8 +325,8 @@
 
         function showClusterPopup(markers, pixelPoint) {
             const records = markers.map(m => m.observationData).filter(Boolean)
-                .sort((a, b) => (a.commonName || '').toLowerCase().localeCompare((b.commonName || '').toLowerCase()));
-            clusterPopupSummary.textContent = `${records.length} record${records.length === 1 ? '' : 's'}`;
+                .sort((a,b) => (a.commonName||'').toLowerCase().localeCompare((b.commonName||'').toLowerCase()));
+            clusterPopupSummary.textContent = `${records.length} record${records.length===1?'':'s'}`;
             clusterPopupList.innerHTML = records.map(r => `
                 <div class="flex items-center gap-2 py-1.5 border-b border-gray-100 last:border-0">
                     <div class="flex-1 min-w-0">
@@ -374,7 +342,6 @@
         }
 
         document.getElementById('cluster-popup-close').addEventListener('click', hideClusterPopup);
-
         let popupHoverTimeout;
         clusterPopup.addEventListener('mouseenter', () => clearTimeout(popupHoverTimeout));
         clusterPopup.addEventListener('mouseleave', () => { popupHoverTimeout = setTimeout(hideClusterPopup, 300); });
@@ -384,17 +351,15 @@
         map.attributionControl.addAttribution(ATTR.inat);
         setTimeout(updateAttributionOffset, 0);
 
+        // suppressMapClick: set true for ~100ms when a cluster or single marker
+        // is tapped on touch, so the map click that follows doesn't close the popup
         let suppressMapClick = false;
-        map.on('click', () => {
-            if (suppressMapClick) return;
-            hideClusterPopup();
-        });
+        map.on('click', () => { if (suppressMapClick) return; hideClusterPopup(); });
         map.on('dragstart', hideClusterPopup);
         map.on('zoomstart', hideClusterPopup);
 
-        [['pane-crow', 441], ['pane-prow', 442], ['maskPane', 450], ['boundaryPane', 460]].forEach(([name, z]) => {
-            map.createPane(name);
-            map.getPane(name).style.zIndex = z;
+        [['pane-crow',441],['pane-prow',442],['maskPane',450],['boundaryPane',460]].forEach(([name,z]) => {
+            map.createPane(name); map.getPane(name).style.zIndex = z;
         });
         map.getPane('maskPane').style.pointerEvents = 'none';
         map.getPane('boundaryPane').style.pointerEvents = 'none';
@@ -420,44 +385,51 @@
         const singlePointClusterIcon = L.divIcon({
             html: '<div><span>1</span></div>',
             className: 'marker-cluster marker-cluster-small',
-            iconSize: new L.Point(40, 40),
-            iconAnchor: new L.Point(20, 20),
-            popupAnchor: new L.Point(0, -20)
+            iconSize: new L.Point(40,40),
+            iconAnchor: new L.Point(20,20),
+            popupAnchor: new L.Point(0,-20)
         });
 
-        // Desktop: hover on clusters shows popup
-        if (!isTouchDevice) {
-            exactPointsLayer.on('clustermouseover', e => {
-                clearTimeout(popupHoverTimeout);
-                showClusterPopup(e.layer.getAllChildMarkers(), map.latLngToContainerPoint(e.layer.getLatLng()));
-            });
-            exactPointsLayer.on('clustermouseout', () => {
-                popupHoverTimeout = setTimeout(hideClusterPopup, 300);
-            });
-        }
+        // Desktop: hover on clusters
+        exactPointsLayer.on('clustermouseover', e => {
+            if (isTouchDevice) return;
+            clearTimeout(popupHoverTimeout);
+            showClusterPopup(e.layer.getAllChildMarkers(), map.latLngToContainerPoint(e.layer.getLatLng()));
+        });
+        exactPointsLayer.on('clustermouseout', () => {
+            if (isTouchDevice) return;
+            popupHoverTimeout = setTimeout(hideClusterPopup, 300);
+        });
 
-        // Mobile: intercept touchend on the map container directly —
-        // bypasses clusterclick entirely which is unreliable in markercluster
-        if (isTouchDevice) {
-            document.getElementById('map').addEventListener('touchend', function(e) {
-                const touch = e.changedTouches[0];
-                const el = document.elementFromPoint(touch.clientX, touch.clientY);
-                if (!el) return;
-                const icon = el.closest('.marker-cluster');
-                if (!icon) return;
-                // Find the MarkerCluster layer whose _icon matches this DOM element
-                let foundCluster = null;
-                exactPointsLayer.eachLayer(function(layer) {
-                    if (layer._icon === icon) foundCluster = layer;
-                });
-                if (!foundCluster) return;
-                e.preventDefault();
-                e.stopPropagation();
-                suppressMapClick = true;
-                setTimeout(() => { suppressMapClick = false; }, 100);
-                showClusterPopup(foundCluster.getAllChildMarkers(), map.latLngToContainerPoint(foundCluster.getLatLng()));
-            }, { passive: false });
-        }
+        // Mobile: clusterclick works correctly with Leaflet 1.9.4 + markercluster 1.4.1
+        // The known breakage was only with Leaflet 1.9.0 which we do not use.
+        // We use clusterclick here and additionally bind touchstart directly to each
+        // cluster icon element after the cluster group renders, as a belt-and-braces fallback.
+        exactPointsLayer.on('clusterclick', e => {
+            if (!isTouchDevice) return;
+            suppressMapClick = true;
+            setTimeout(() => { suppressMapClick = false; }, 100);
+            showClusterPopup(e.layer.getAllChildMarkers(), map.latLngToContainerPoint(e.layer.getLatLng()));
+        });
+
+        // Belt-and-braces: also bind touchstart directly on cluster icon DOM elements.
+        // MarkerCluster fires 'animationend' after every cluster render cycle.
+        // We walk all visible cluster icons and attach a touchstart if not already bound.
+        exactPointsLayer.on('animationend', () => {
+            if (!isTouchDevice) return;
+            // _featureGroup holds the actual rendered cluster marker layers
+            exactPointsLayer._featureGroup.eachLayer(layer => {
+                if (!(layer instanceof L.MarkerCluster)) return;
+                if (!layer._icon || layer._icon._tapBound) return;
+                layer._icon._tapBound = true;
+                layer._icon.addEventListener('touchstart', function(e) {
+                    e.stopPropagation();
+                    suppressMapClick = true;
+                    setTimeout(() => { suppressMapClick = false; }, 100);
+                    showClusterPopup(layer.getAllChildMarkers(), map.latLngToContainerPoint(layer.getLatLng()));
+                }, { passive: true });
+            });
+        });
 
         const layerGroups = { crow: L.layerGroup(), prow: L.layerGroup() };
         const layerLoaded = { crow: false, prow: false };
@@ -488,29 +460,22 @@
             query.run((error, featureCollection) => {
                 spinner.classList.add('hidden');
                 if (error) return console.error(`${type.toUpperCase()} Query error:`, error);
-                const validFeatures = (featureCollection.features || []).filter(f => {
-                    try { return f.geometry && turf.booleanIntersects(f, activePolygonFeature); } catch (e) { return false; }
+                const validFeatures = (featureCollection.features||[]).filter(f => {
+                    try { return f.geometry && turf.booleanIntersects(f, activePolygonFeature); } catch(e) { return false; }
                 });
                 if (validFeatures.length > 0) {
                     L.geoJSON(validFeatures, {
-                        pane: cfg.pane,
-                        style: cfg.style,
-                        onEachFeature: (f, l) => l.bindPopup(cfg.popup)
+                        pane: cfg.pane, style: cfg.style,
+                        onEachFeature: (f,l) => l.bindPopup(cfg.popup)
                     }).addTo(layerGroups[type]);
                 }
                 layerLoaded[type] = true;
             });
         }
 
-        ['crow', 'prow'].forEach(type => document.getElementById(`toggle-${type}`).addEventListener('change', e => {
-            if (e.target.checked) {
-                map.addLayer(layerGroups[type]);
-                map.attributionControl.addAttribution(ATTR[type]);
-                loadAccessLayer(type);
-            } else {
-                map.removeLayer(layerGroups[type]);
-                map.attributionControl.removeAttribution(ATTR[type]);
-            }
+        ['crow','prow'].forEach(type => document.getElementById(`toggle-${type}`).addEventListener('change', e => {
+            if (e.target.checked) { map.addLayer(layerGroups[type]); map.attributionControl.addAttribution(ATTR[type]); loadAccessLayer(type); }
+            else { map.removeLayer(layerGroups[type]); map.attributionControl.removeAttribution(ATTR[type]); }
         }));
 
         fetch('https://firebasestorage.googleapis.com/v0/b/naturecitynorwich.firebasestorage.app/o/Assets%2FUpper%20Bure%20Conservation%20Triangle.geojson?alt=media&token=3a806326-ab79-4317-a2ad-7e5804628a25')
@@ -518,10 +483,10 @@
             .then(geojsonData => {
                 activePolygonFeature = geojsonData.type === 'FeatureCollection' ? geojsonData.features[0] : geojsonData;
                 const boundaryGeom = activePolygonFeature.geometry;
-                const worldRectangle = [[-180, -90], [-180, 90], [180, 90], [180, -90], [-180, -90]];
+                const worldRectangle = [[-180,-90],[-180,90],[180,90],[180,-90],[-180,-90]];
                 const maskPolygons = boundaryGeom.type === 'Polygon' ? [boundaryGeom.coordinates] : boundaryGeom.coordinates;
-                L.geoJSON({ type: 'Feature', geometry: { type: 'MultiPolygon', coordinates: [[worldRectangle], ...maskPolygons] } }, {
-                    style: { fillColor: '#ffffff', fillOpacity: 0.85, stroke: false, fillRule: 'evenodd' },
+                L.geoJSON({ type:'Feature', geometry:{ type:'MultiPolygon', coordinates:[[worldRectangle],...maskPolygons] } }, {
+                    style: { fillColor:'#ffffff', fillOpacity:0.85, stroke:false, fillRule:'evenodd' },
                     pane: 'maskPane'
                 }).addTo(map);
                 const boundaryLayer = L.geoJSON(activePolygonFeature, {
@@ -558,7 +523,7 @@
                 if (data.results) data.results.forEach(obs => {
                     if (mappedObsIds.has(obs.id) || !obs.location) return;
                     const lat = parseFloat(obs.location.split(',')[0]), lng = parseFloat(obs.location.split(',')[1]);
-                    if (!isNaN(lat) && !isNaN(lng) && turf.booleanPointInPolygon(turf.point([lng, lat]), activePolygonFeature)) {
+                    if (!isNaN(lat) && !isNaN(lng) && turf.booleanPointInPolygon(turf.point([lng,lat]), activePolygonFeature)) {
                         const commonName = obs.taxon?.preferred_common_name || 'Unknown Species';
                         const latinName = obs.taxon?.name || 'Unknown';
                         const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(latinName)}`;
@@ -569,18 +534,20 @@
                                     <a href="#" onclick="openGooglePopup('${searchUrl}'); return false;" class="text-blue-600 hover:text-blue-800 underline italic transition-colors">${latinName}</a>
                                 </div>
                             </div>`;
-                        const marker = L.marker([lat, lng], { icon: singlePointClusterIcon })
+                        const marker = L.marker([lat,lng], { icon: singlePointClusterIcon })
                             .bindPopup(popupHtml, { autoPan: false, closeButton: false })
                             .addTo(exactPointsLayer);
                         marker.observationData = { commonName, latinName, searchUrl };
 
                         if (isTouchDevice) {
+                            // Single marker tap on mobile: open its Leaflet popup
                             marker.on('click', function() {
                                 suppressMapClick = true;
                                 setTimeout(() => { suppressMapClick = false; }, 100);
                                 this.openPopup();
                             });
                         } else {
+                            // Desktop: hover shows the cluster popup div (consistent with cluster hover)
                             marker.on('mouseover', function() {
                                 clearTimeout(popupHoverTimeout);
                                 showClusterPopup([this], map.latLngToContainerPoint(this.getLatLng()));
@@ -593,7 +560,7 @@
                         mappedObsIds.add(obs.id);
                     }
                 });
-            } catch (err) { console.error(err); }
+            } catch(err) { console.error(err); }
         }
 
         map.on('moveend', () => {
