@@ -137,25 +137,11 @@
         #wisefrog-footer:hover span { opacity: 0.85; }
         #wisefrog-footer:hover img { opacity: 1; }
 
-        /* ── FIX 1: MOBILE OVERRIDES ───────────────────────────────────────────
-           On screens narrower than 768px:
-           - The control panel starts translated off-screen (hidden)
-           - The open-panel button is always visible as a floating button
-           - The cluster popup is repositioned to the bottom-centre of the screen
-           - Touch targets on taxon/access labels are enlarged
-        ──────────────────────────────────────────────────────────────────────── */
         @media (max-width: 767px) {
-            /* Panel slides in from the right as a full-height drawer */
             #control-panel {
                 width: 100% !important;
                 max-width: 360px;
-                transform: translateX(100%); /* hidden by default on mobile */
             }
-            /* Open button always visible on mobile (not hidden by default) */
-            #open-panel-btn {
-                display: flex !important;
-            }
-            /* Cluster popup: fixed to bottom-centre, full-width-ish, above any chrome */
             #cluster-popup {
                 position: fixed !important;
                 bottom: 80px !important;
@@ -165,7 +151,6 @@
                 max-width: calc(100vw - 32px);
                 width: 340px;
             }
-            /* Larger touch targets for taxon/access rows */
             .taxon-label, .access-label {
                 min-height: 44px;
                 padding-top: 0.75rem;
@@ -176,11 +161,11 @@
 </head>
 <body class="m-0 p-0 antialiased overflow-hidden h-screen w-screen relative font-sans text-gray-800">
 
-    <button id="open-panel-btn" class="absolute top-4 right-4 z-[999] bg-white/95 backdrop-blur p-2.5 rounded-lg shadow-md text-emerald-800 hover:bg-gray-50 hidden transition-all border border-gray-200" aria-label="Open Menu">
+    <button id="open-panel-btn" class="absolute top-4 right-4 z-[999] bg-white/95 backdrop-blur p-2.5 rounded-lg shadow-md text-emerald-800 hover:bg-gray-50 transition-all border border-gray-200" aria-label="Open Menu" style="display:none;">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
     </button>
 
-    <div id="control-panel" class="absolute top-0 right-0 z-[1000] h-screen w-[360px] bg-white/95 backdrop-blur-md shadow-2xl border-l border-gray-200 overflow-y-auto transition-transform duration-300 ease-in-out translate-x-0">
+    <div id="control-panel" class="absolute top-0 right-0 z-[1000] h-screen w-[360px] bg-white/95 backdrop-blur-md shadow-2xl border-l border-gray-200 overflow-y-auto transition-transform duration-300 ease-in-out">
         <button id="close-panel-btn" class="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-800 transition-colors bg-white/50 rounded-full" aria-label="Close Menu">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
@@ -273,7 +258,6 @@
         const PANEL_WIDTH = 360;
         const POINTS_ZOOM_THRESHOLD = 17;
 
-        // ── FIX 2: Detect touch device once, used throughout ─────────────────
         const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 
         const taxonOptions = [
@@ -310,26 +294,31 @@
         const clusterPopupSummary = document.getElementById('cluster-popup-summary');
         const clusterPopupList = document.getElementById('cluster-popup-list');
 
-        // ── FIX 3: Panel open/close — on mobile, panel starts hidden ─────────
-        // On mobile the CSS already starts the panel at translateX(100%).
-        // The open button's `hidden` Tailwind class is overridden by the CSS
-        // `display: flex !important` rule in the mobile media query, so it is
-        // always visible on mobile without any JS change needed here.
+        // ── PANEL INIT: on mobile start hidden; on desktop start open ────────
+        const isMobile = window.innerWidth < 768;
+        if (isMobile) {
+            panel.classList.add('translate-x-full');
+            openBtn.style.display = 'flex';
+        } else {
+            panel.classList.remove('translate-x-full');
+            openBtn.style.display = 'none';
+        }
+
         function isPanelOpen() { return !panel.classList.contains('translate-x-full'); }
 
         function updateAttributionOffset() {
             const container = document.querySelector('.leaflet-bottom.leaflet-right');
-            if (container) container.style.paddingRight = (isPanelOpen() && window.innerWidth >= 768 ? PANEL_WIDTH : 0) + 'px';
+            if (container) container.style.paddingRight = (isPanelOpen() && !isMobile ? PANEL_WIDTH : 0) + 'px';
         }
 
         openBtn.addEventListener('click', () => {
             panel.classList.remove('translate-x-full');
-            openBtn.classList.add('hidden');
+            openBtn.style.display = 'none';
             updateAttributionOffset();
         });
         document.getElementById('close-panel-btn').addEventListener('click', () => {
             panel.classList.add('translate-x-full');
-            openBtn.classList.remove('hidden');
+            openBtn.style.display = 'flex';
             updateAttributionOffset();
         });
 
@@ -351,20 +340,18 @@
 
         function hideClusterPopup() { clusterPopup.classList.add('hidden'); }
         function repositionClusterPopup(anchorPx) {
+            if (isMobile) return; // CSS handles positioning on mobile
             const mapEl = document.getElementById('map');
             const mapW = mapEl.offsetWidth, mapH = mapEl.offsetHeight;
             const popW = clusterPopup.offsetWidth, popH = clusterPopup.offsetHeight;
             const TAIL = 16, MARGIN = 10;
             let left = anchorPx.x - popW / 2, top = anchorPx.y - popH - TAIL;
             if (top < MARGIN) top = anchorPx.y + TAIL + 20;
-            const rightBound = isPanelOpen() && window.innerWidth >= 768 ? mapW - PANEL_WIDTH - MARGIN : mapW - MARGIN;
+            const rightBound = isPanelOpen() ? mapW - PANEL_WIDTH - MARGIN : mapW - MARGIN;
             left = Math.max(MARGIN, Math.min(left, rightBound - popW));
             top = Math.max(MARGIN, Math.min(top, mapH - popH - MARGIN));
-            // On mobile the popup is positioned via CSS (fixed, bottom-centre), so skip JS repositioning
-            if (window.innerWidth >= 768) {
-                clusterPopup.style.left = left + 'px';
-                clusterPopup.style.top = top + 'px';
-            }
+            clusterPopup.style.left = left + 'px';
+            clusterPopup.style.top = top + 'px';
         }
         function showClusterPopup(markers, pixelPoint) {
             const records = markers.map(m => m.observationData).filter(Boolean)
@@ -386,17 +373,20 @@
 
         document.getElementById('cluster-popup-close').addEventListener('click', hideClusterPopup);
         let popupHoverTimeout;
-        // Keep mouse hover behaviour on desktop; touch devices use tap (handled below)
-        if (!isTouchDevice) {
-            clusterPopup.addEventListener('mouseenter', () => clearTimeout(popupHoverTimeout));
-            clusterPopup.addEventListener('mouseleave', () => { popupHoverTimeout = setTimeout(hideClusterPopup, 200); });
-        }
+        clusterPopup.addEventListener('mouseenter', () => clearTimeout(popupHoverTimeout));
+        clusterPopup.addEventListener('mouseleave', () => { popupHoverTimeout = setTimeout(hideClusterPopup, 200); });
 
         const map = L.map('map', { preferCanvas: true, zoomSnap: 0.1, zoomDelta: 0.5 });
         map.attributionControl.setPrefix('');
         map.attributionControl.addAttribution(ATTR.inat);
         setTimeout(updateAttributionOffset, 0);
-        map.on('click', hideClusterPopup);
+
+        // Only hide cluster popup on map click when no cluster was just tapped
+        let clusterJustTapped = false;
+        map.on('click', () => {
+            if (clusterJustTapped) { clusterJustTapped = false; return; }
+            hideClusterPopup();
+        });
         map.on('dragstart', hideClusterPopup);
         map.on('zoomstart', hideClusterPopup);
 
@@ -432,10 +422,10 @@
             popupAnchor: new L.Point(0, -20)
         });
 
-        // ── FIX 4: Cluster interaction — hover on desktop, tap on touch ───────
+        // ── CLUSTER EVENTS: hover on desktop, tap on touch ────────────────────
         if (isTouchDevice) {
             exactPointsLayer.on('clusterclick', e => {
-                L.DomEvent.stopPropagation(e);
+                clusterJustTapped = true; // prevent map click from immediately closing popup
                 showClusterPopup(e.layer.getAllChildMarkers(), map.latLngToContainerPoint(e.layer.getLatLng()));
             });
         } else {
@@ -443,12 +433,15 @@
                 clearTimeout(popupHoverTimeout);
                 showClusterPopup(e.layer.getAllChildMarkers(), map.latLngToContainerPoint(e.layer.getLatLng()));
             });
-            exactPointsLayer.on('clustermouseout', () => { popupHoverTimeout = setTimeout(hideClusterPopup, 200); });
+            exactPointsLayer.on('clustermouseout', () => {
+                popupHoverTimeout = setTimeout(hideClusterPopup, 200);
+            });
         }
 
         map.on('popupopen', e => {
+            if (isTouchDevice) return;
             const popupNode = e.popup.getElement();
-            if (popupNode && !isTouchDevice) {
+            if (popupNode) {
                 popupNode.addEventListener('mouseenter', () => clearTimeout(popupHoverTimeout));
                 popupNode.addEventListener('mouseleave', () => { popupHoverTimeout = setTimeout(() => map.closePopup(), 200); });
             }
@@ -524,8 +517,6 @@
                     pane: 'boundaryPane'
                 }).addTo(map);
                 polygonBounds = boundaryLayer.getBounds();
-                // ── FIX 5: fitBounds — on mobile panel is hidden so use equal padding ──
-                const isMobile = window.innerWidth < 768;
                 map.fitBounds(polygonBounds, {
                     paddingBottomRight: [isMobile ? 20 : PANEL_WIDTH, 20],
                     paddingTopLeft: [20, 20]
@@ -570,14 +561,14 @@
                             .bindPopup(popupHtml, { autoPan: false })
                             .addTo(exactPointsLayer);
                         marker.observationData = { commonName, latinName, searchUrl };
-                        // ── FIX 6: Individual marker — hover on desktop, tap on touch ──
+                        // ── Individual marker: hover on desktop, tap on touch ──
                         if (isTouchDevice) {
                             marker.on('click', function() { this.openPopup(); });
                         } else {
                             marker.on('mouseover', function() { clearTimeout(popupHoverTimeout); this.openPopup(); });
                             marker.on('mouseout', function() { popupHoverTimeout = setTimeout(() => this.closePopup(), 200); });
+                            marker.on('click', hideClusterPopup); // desktop only — closes cluster popup if open
                         }
-                        marker.on('click', hideClusterPopup);
                         mappedObsIds.add(obs.id);
                     }
                 });
