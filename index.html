@@ -259,6 +259,7 @@
         const POINTS_ZOOM_THRESHOLD = 17;
 
         const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+        const isMobile = window.innerWidth < 768;
 
         const taxonOptions = [
             ['47158', 'Insects'], ['3', 'Birds'], ['47126', 'Plants'], ['47170', 'Fungi'], ['40151', 'Mammals'],
@@ -294,8 +295,7 @@
         const clusterPopupSummary = document.getElementById('cluster-popup-summary');
         const clusterPopupList = document.getElementById('cluster-popup-list');
 
-        // ── PANEL INIT: on mobile start hidden; on desktop start open ────────
-        const isMobile = window.innerWidth < 768;
+        // Panel init: hidden on mobile, open on desktop
         if (isMobile) {
             panel.classList.add('translate-x-full');
             openBtn.style.display = 'flex';
@@ -339,8 +339,9 @@
         });
 
         function hideClusterPopup() { clusterPopup.classList.add('hidden'); }
+
         function repositionClusterPopup(anchorPx) {
-            if (isMobile) return; // CSS handles positioning on mobile
+            if (isMobile) return; // CSS handles fixed positioning on mobile
             const mapEl = document.getElementById('map');
             const mapW = mapEl.offsetWidth, mapH = mapEl.offsetHeight;
             const popW = clusterPopup.offsetWidth, popH = clusterPopup.offsetHeight;
@@ -353,6 +354,7 @@
             clusterPopup.style.left = left + 'px';
             clusterPopup.style.top = top + 'px';
         }
+
         function showClusterPopup(markers, pixelPoint) {
             const records = markers.map(m => m.observationData).filter(Boolean)
                 .sort((a, b) => (a.commonName || '').toLowerCase().localeCompare((b.commonName || '').toLowerCase()));
@@ -372,19 +374,23 @@
         }
 
         document.getElementById('cluster-popup-close').addEventListener('click', hideClusterPopup);
+
+        // Keep the popup open when the mouse moves into it
         let popupHoverTimeout;
         clusterPopup.addEventListener('mouseenter', () => clearTimeout(popupHoverTimeout));
-        clusterPopup.addEventListener('mouseleave', () => { popupHoverTimeout = setTimeout(hideClusterPopup, 200); });
+        clusterPopup.addEventListener('mouseleave', () => { popupHoverTimeout = setTimeout(hideClusterPopup, 300); });
 
         const map = L.map('map', { preferCanvas: true, zoomSnap: 0.1, zoomDelta: 0.5 });
         map.attributionControl.setPrefix('');
         map.attributionControl.addAttribution(ATTR.inat);
         setTimeout(updateAttributionOffset, 0);
 
-        // Only hide cluster popup on map click when no cluster was just tapped
-        let clusterJustTapped = false;
+        // FIX A: map click hides cluster popup only after a short delay,
+        // allowing clusterclick (which fires just before map click on touch)
+        // to set a flag that cancels the hide.
+        let suppressMapClick = false;
         map.on('click', () => {
-            if (clusterJustTapped) { clusterJustTapped = false; return; }
+            if (suppressMapClick) return;
             hideClusterPopup();
         });
         map.on('dragstart', hideClusterPopup);
@@ -414,6 +420,7 @@
             maxClusterRadius: 50,
             spiderfyDistanceMultiplier: 1.8
         });
+
         const singlePointClusterIcon = L.divIcon({
             html: '<div><span>1</span></div>',
             className: 'marker-cluster marker-cluster-small',
@@ -422,10 +429,15 @@
             popupAnchor: new L.Point(0, -20)
         });
 
-        // ── CLUSTER EVENTS: hover on desktop, tap on touch ────────────────────
+        // FIX B: Cluster interactions
+        // Desktop: hover to show/hide cluster popup (unchanged from original)
+        // Mobile/touch: tap cluster → set suppressMapClick so the map click
+        //   that immediately follows on touch doesn't close the popup we just opened
         if (isTouchDevice) {
             exactPointsLayer.on('clusterclick', e => {
-                clusterJustTapped = true; // prevent map click from immediately closing popup
+                suppressMapClick = true;
+                // Reset flag after the map click event has had time to fire
+                setTimeout(() => { suppressMapClick = false; }, 50);
                 showClusterPopup(e.layer.getAllChildMarkers(), map.latLngToContainerPoint(e.layer.getLatLng()));
             });
         } else {
@@ -434,18 +446,16 @@
                 showClusterPopup(e.layer.getAllChildMarkers(), map.latLngToContainerPoint(e.layer.getLatLng()));
             });
             exactPointsLayer.on('clustermouseout', () => {
-                popupHoverTimeout = setTimeout(hideClusterPopup, 200);
+                popupHoverTimeout = setTimeout(hideClusterPopup, 300);
             });
         }
 
-        map.on('popupopen', e => {
-            if (isTouchDevice) return;
-            const popupNode = e.popup.getElement();
-            if (popupNode) {
-                popupNode.addEventListener('mouseenter', () => clearTimeout(popupHoverTimeout));
-                popupNode.addEventListener('mouseleave', () => { popupHoverTimeout = setTimeout(() => map.closePopup(), 200); });
-            }
-        });
+        // FIX C: Remove the map.on('popupopen') mouseleave handler entirely.
+        // It was causing a race condition where moving the mouse from a marker
+        // to its popup briefly triggered mouseout → close timer → popup closed
+        // before mouseenter on the popup could cancel it.
+        // Instead, individual markers handle their own open/close via mouseover/mouseout,
+        // and the popup's own mouseenter/mouseleave keeps it open when hovered directly.
 
         const layerGroups = { crow: L.layerGroup(), prow: L.layerGroup() };
         const layerLoaded = { crow: false, prow: false };
@@ -558,16 +568,30 @@
                                 </div>
                             </div>`;
                         const marker = L.marker([lat, lng], { icon: singlePointClusterIcon })
-                            .bindPopup(popupHtml, { autoPan: false })
+                            .bindPopup(popupHtml, { autoPan: false, closeButton: false })
                             .addTo(exactPointsLayer);
                         marker.observationData = { commonName, latinName, searchUrl };
-                        // ── Individual marker: hover on desktop, tap on touch ──
+
                         if (isTouchDevice) {
-                            marker.on('click', function() { this.openPopup(); });
+                            // FIX D: tap opens Leaflet popup; suppress the map click
+                            // that fires immediately after so it doesn't close it
+                            marker.on('click', function() {
+                                suppressMapClick = true;
+                                setTimeout(() => { suppressMapClick = false; }, 50);
+                                this.openPopup();
+                            });
                         } else {
-                            marker.on('mouseover', function() { clearTimeout(popupHoverTimeout); this.openPopup(); });
-                            marker.on('mouseout', function() { popupHoverTimeout = setTimeout(() => this.closePopup(), 200); });
-                            marker.on('click', hideClusterPopup); // desktop only — closes cluster popup if open
+                            // FIX E: desktop hover — use the cluster popup div (not Leaflet popup)
+                            // so the common name/latin name appears in the same styled panel
+                            // as cluster hovers, avoiding the race condition with Leaflet's popup system
+                            marker.on('mouseover', function() {
+                                clearTimeout(popupHoverTimeout);
+                                showClusterPopup([this], map.latLngToContainerPoint(this.getLatLng()));
+                            });
+                            marker.on('mouseout', function() {
+                                popupHoverTimeout = setTimeout(hideClusterPopup, 300);
+                            });
+                            marker.on('click', hideClusterPopup);
                         }
                         mappedObsIds.add(obs.id);
                     }
