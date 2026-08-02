@@ -189,7 +189,6 @@
         </div>
     </div>
 
-    <!-- Cluster List Popup -->
     <div id="cluster-popup" class="hidden">
         <div class="flex items-center justify-between gap-3 px-4 py-3 border-b border-gray-100 flex-shrink-0">
             <div>
@@ -203,7 +202,6 @@
         <div id="cluster-popup-list" class="px-3 py-2 space-y-1.5"></div>
     </div>
 
-    <!-- Help Modal -->
     <div id="help-modal" class="fixed inset-0 z-[1100] hidden" aria-hidden="true">
         <div id="help-modal-backdrop" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
         <div class="absolute inset-0 flex items-center justify-center p-4 sm:p-6">
@@ -234,7 +232,6 @@
         </div>
     </div>
 
-    <!-- NEW: In-App Wikipedia Species Modal -->
     <div id="species-modal" class="fixed inset-0 z-[1200] hidden" aria-hidden="true">
         <div id="species-modal-backdrop" class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
         <div class="absolute inset-0 flex items-center justify-center p-4 sm:p-6 pointer-events-none">
@@ -333,7 +330,6 @@
             helpModal.setAttribute('aria-hidden', 'true');
         }));
 
-        // --- NEW WIKIPEDIA MODAL LOGIC ---
         const speciesModal = document.getElementById('species-modal');
         const speciesModalTitle = document.getElementById('species-modal-title');
         const speciesModalSubtitle = document.getElementById('species-modal-subtitle');
@@ -366,14 +362,21 @@
             speciesModal.setAttribute('aria-hidden', 'false');
 
             try {
-                // Fetch summary from the free Wikipedia REST API
                 const res = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(latinName)}`);
                 const data = await res.json();
 
                 if (data.type === 'standard' && data.extract_html) {
                     let html = '';
-                    if (data.thumbnail && data.thumbnail.source) {
-                        html += `<img src="${data.thumbnail.source}" alt="${commonName}" class="w-full h-48 object-cover rounded-lg mb-4 shadow-sm border border-gray-100">`;
+                    
+                    // Prioritize highest resolution originalimage, fallback to thumbnail
+                    const imgSrc = data.originalimage?.source || data.thumbnail?.source;
+                    
+                    if (imgSrc) {
+                        // Using object-contain and max-h-60 ensures the image is shown fully uncropped
+                        html += `
+                        <div class="bg-gray-50 rounded-lg mb-4 border border-gray-100 shadow-sm flex items-center justify-center p-2">
+                            <img src="${imgSrc}" alt="${commonName}" class="max-w-full max-h-60 object-contain rounded">
+                        </div>`;
                     }
                     html += `<div class="text-gray-700 leading-relaxed text-sm sm:text-base">${data.extract_html}</div>`;
                     html += `<div class="mt-4 pt-4 border-t border-gray-100 text-xs text-gray-400">Source: <a href="${data.content_urls.desktop.page}" target="_blank" rel="noopener noreferrer" class="text-[#406381] hover:text-[#BCCB54] underline transition-colors">Read full article on Wikipedia</a></div>`;
@@ -395,7 +398,6 @@
                 `;
             }
         }
-        // ------------------------------------
 
         function hideClusterPopup() { clusterPopup.classList.add('hidden'); }
         function repositionClusterPopup(anchorPx) {
@@ -612,53 +614,4 @@
                             <div class="font-sans text-center min-w-[180px] max-w-[240px] px-1 py-1">
                                 <div class="font-bold text-sm text-emerald-800">${commonName}</div>
                                 <div class="text-xs mt-1.5 mb-2">
-                                    <a href="#" onclick="openSpeciesModal('${latinName.replace(/'/g, "\\'")}', '${commonName.replace(/'/g, "\\'")}'); return false;" class="text-blue-600 hover:text-blue-800 underline italic transition-colors">${latinName}</a>
-                                </div>
-                                <div class="text-[10px] text-gray-500 leading-tight border-t border-gray-100 pt-2 mt-1.5 whitespace-normal text-left">
-                                    Observation by ${userName}, licensed under ${licenseCode}, sourced from <a href="${inatLink}" target="_blank" rel="noopener noreferrer" class="text-[#406381] hover:text-blue-800 underline">iNaturalist</a>.
-                                </div>
-                            </div>`;
-                            
-                        const marker = L.marker([lat, lng], { icon: singlePointClusterIcon })
-                            .bindPopup(popupHtml, { autoPan: false })
-                            .addTo(exactPointsLayer);
-                            
-                        marker.observationData = { commonName, latinName, userName, licenseCode, inatLink };
-                        
-                        if (!L.Browser.touch) {
-                            marker.on('mouseover', function() { clearTimeout(popupHoverTimeout); this.openPopup(); });
-                            marker.on('mouseout', function() { popupHoverTimeout = setTimeout(() => this.closePopup(), 200); });
-                        }
-                        
-                        marker.on('click', hideClusterPopup);
-                        mappedObsIds.add(obs.id);
-                    }
-                });
-            } catch (err) { console.error(err); }
-        }
-
-        map.on('moveend', () => {
-            clearTimeout(debounceTimer);
-            if (map.getZoom() >= POINTS_ZOOM_THRESHOLD) {
-                if (map.hasLayer(gridTilesLayer)) map.removeLayer(gridTilesLayer);
-                if (!map.hasLayer(exactPointsLayer)) exactPointsLayer.addTo(map);
-                debounceTimer = setTimeout(fetchPointsForCurrentView, 300);
-            } else {
-                if (map.hasLayer(exactPointsLayer)) map.removeLayer(exactPointsLayer);
-                if (!map.hasLayer(gridTilesLayer)) gridTilesLayer.addTo(map);
-                refreshGridLayer();
-                hideClusterPopup();
-            }
-        });
-
-        document.querySelectorAll('input[name="taxon"]').forEach(radio => radio.addEventListener('change', e => {
-            taxonId = e.target.value;
-            mappedObsIds.clear();
-            exactPointsLayer.clearLayers();
-            hideClusterPopup();
-            refreshGridLayer();
-            map.fire('moveend');
-        }));
-    </script>
-</body>
-</html>
+                                    <a href="#" onclick="openSpeciesModal('${latinName.replace(/'/g, "\\'")}', '${commonName.replace(/'/g, "\\'")}'); 
