@@ -122,7 +122,9 @@
             gap: 0.5rem;
             padding: 1rem 1.5rem 1.25rem;
             border-top: 1px solid rgba(64, 99, 129, 0.12);
-            margin-top: 1.5rem;
+            flex-shrink: 0;
+            background: inherit;
+            z-index: 10;
         }
         #wisefrog-footer span {
             font-size: 0.65rem;
@@ -140,26 +142,31 @@
 </head>
 <body class="m-0 p-0 antialiased overflow-hidden h-screen w-screen relative font-sans text-gray-800">
 
-    <button id="open-panel-btn" class="absolute top-4 right-4 z-[999] bg-white/95 backdrop-blur p-2.5 rounded-lg shadow-md text-emerald-800 hover:bg-gray-50 hidden transition-all border border-gray-200" aria-label="Open Menu">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+    <button id="open-panel-btn" class="absolute top-4 right-4 z-[999] px-3 py-2 rounded-lg shadow-md text-white font-bold hidden transition-all border border-transparent flex items-center gap-2" style="background-color:#BCCB54;" aria-label="Open Menu" onmouseover="this.style.backgroundColor='#a8b847'" onmouseout="this.style.backgroundColor='#BCCB54'">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+        Menu
     </button>
 
-    <div id="control-panel" class="absolute top-0 right-0 z-[1000] h-screen w-[360px] bg-white/95 backdrop-blur-md shadow-2xl border-l border-gray-200 overflow-y-auto transition-transform duration-300 ease-in-out translate-x-0">
-        <button id="close-panel-btn" class="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-800 transition-colors bg-white/50 rounded-full" aria-label="Close Menu">
+    <div id="control-panel" class="absolute top-0 right-0 z-[1000] h-screen w-full sm:w-[360px] flex flex-col bg-white/95 backdrop-blur-md shadow-2xl border-l border-gray-200 transition-transform duration-300 ease-in-out translate-x-0">
+        <button id="close-panel-btn" class="absolute top-3 right-3 z-[1001] p-2 text-gray-500 hover:text-gray-800 transition-colors bg-white/80 backdrop-blur rounded-full shadow-sm" aria-label="Close Menu">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
 
-        <div class="p-6 pt-12">
-            <div class="mb-6 pb-6 border-b border-gray-100">
-                <img src="https://static.wixstatic.com/media/06d014_0eae07168ee2445f9c6c5dfa48e1a9ea~mv2.jpg/v1/fill/w_314,h_245,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/Upper%20Bure%20%26%20Glaven%20logo_edited.jpg" alt="Upper Bure & Glaven Logo" class="w-full object-contain rounded">
+        <div class="flex-1 overflow-y-auto p-5 pt-14 sm:p-6 sm:pt-12">
+            <div class="mb-4 sm:mb-6 pb-4 sm:pb-6 border-b border-gray-100 flex justify-center">
+                <img src="https://static.wixstatic.com/media/06d014_0eae07168ee2445f9c6c5dfa48e1a9ea~mv2.jpg/v1/fill/w_314,h_245,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/Upper%20Bure%20%26%20Glaven%20logo_edited.jpg" alt="Upper Bure & Glaven Logo" class="h-20 sm:h-auto w-full max-w-[220px] sm:max-w-none object-contain rounded">
             </div>
 
-            <h2 class="text-2xl font-bold mb-4 text-[#406381] text-center">Wild Finder App</h2>
+            <h2 class="text-xl sm:text-2xl font-bold mb-4 text-[#406381] text-center">Wild Finder App</h2>
 
-            <div class="mb-6">
+            <div class="mb-5 sm:mb-6 space-y-3">
                 <button id="help-info-btn" class="w-full flex items-center justify-center gap-2 text-white font-bold px-4 py-3 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors" style="background-color:#BCCB54;" aria-label="Open help and information" onmouseover="this.style.backgroundColor='#a8b847'" onmouseout="this.style.backgroundColor='#BCCB54'">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 1.918-2 3.522-2 2.21 0 4 1.343 4 3 0 1.34-1.172 2.475-2.786 2.87-.897.22-1.214.55-1.214 1.13V15m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     Help and Information
+                </button>
+                <button id="show-map-btn" class="w-full flex items-center justify-center gap-2 text-white font-bold px-4 py-3 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors" style="background-color:#BCCB54;" aria-label="Show Map" onmouseover="this.style.backgroundColor='#a8b847'" onmouseout="this.style.backgroundColor='#BCCB54'">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" /></svg>
+                    Show Map
                 </button>
             </div>
 
@@ -274,7 +281,15 @@
 
         function updateAttributionOffset() {
             const container = document.querySelector('.leaflet-bottom.leaflet-right');
-            if (container) container.style.paddingRight = (!panel.classList.contains('translate-x-full') ? PANEL_WIDTH : 0) + 'px';
+            // Ensure attribution isn't shifted off-screen completely on mobile when panel is open
+            const offset = (!panel.classList.contains('translate-x-full') && window.innerWidth >= 640) ? PANEL_WIDTH : 0;
+            if (container) container.style.paddingRight = offset + 'px';
+        }
+
+        // Auto-hide the panel on mobile devices on initial load
+        if (window.innerWidth < 640) {
+            panel.classList.add('translate-x-full');
+            openBtn.classList.remove('hidden');
         }
 
         openBtn.addEventListener('click', () => {
@@ -286,6 +301,17 @@
             panel.classList.add('translate-x-full');
             openBtn.classList.remove('hidden');
             updateAttributionOffset();
+        });
+
+        document.getElementById('show-map-btn').addEventListener('click', () => {
+            panel.classList.add('translate-x-full');
+            openBtn.classList.remove('hidden');
+            updateAttributionOffset();
+            
+            // Zoom to the full extent of the map bounds
+            if (polygonBounds) {
+                map.fitBounds(polygonBounds, { paddingBottomRight: [20, 20], paddingTopLeft: [20, 20] });
+            }
         });
 
         const helpModal = document.getElementById('help-modal');
@@ -312,7 +338,7 @@
             const TAIL = 16, MARGIN = 10;
             let left = anchorPx.x - popW / 2, top = anchorPx.y - popH - TAIL;
             if (top < MARGIN) top = anchorPx.y + TAIL + 20;
-            const rightBound = !panel.classList.contains('translate-x-full') ? mapW - PANEL_WIDTH - MARGIN : mapW - MARGIN;
+            const rightBound = (!panel.classList.contains('translate-x-full') && window.innerWidth >= 640) ? mapW - PANEL_WIDTH - MARGIN : mapW - MARGIN;
             left = Math.max(MARGIN, Math.min(left, rightBound - popW));
             top = Math.max(MARGIN, Math.min(top, mapH - popH - MARGIN));
             clusterPopup.style.left = left + 'px';
@@ -467,7 +493,13 @@
                     pane: 'boundaryPane'
                 }).addTo(map);
                 polygonBounds = boundaryLayer.getBounds();
-                map.fitBounds(polygonBounds, { paddingBottomRight: [PANEL_WIDTH, 0], paddingTopLeft: [20, 20] });
+                
+                // Adjust map padding based on screen size so it centers nicely on desktop but uses full width on mobile
+                const paddingOpts = window.innerWidth >= 640 && !panel.classList.contains('translate-x-full')
+                    ? { paddingBottomRight: [PANEL_WIDTH, 0], paddingTopLeft: [20, 20] }
+                    : { paddingBottomRight: [20, 20], paddingTopLeft: [20, 20] };
+                map.fitBounds(polygonBounds, paddingOpts);
+                
                 refreshGridLayer();
             })
             .catch(err => console.error('Failed to load boundary GeoJSON:', err));
@@ -492,8 +524,7 @@
                 const response = await fetch(apiUrl), data = await response.json();
                 if (data.results) data.results.forEach(obs => {
                     if (mappedObsIds.has(obs.id) || !obs.location) return;
-                    // Exclude observations with no licence set — iNaturalist treats a null/empty
-                    // license_code as "All Rights Reserved", which must not be republished here.
+                    // Exclude observations with no licence set
                     if (!obs.license_code) { mappedObsIds.add(obs.id); return; }
                     const lat = parseFloat(obs.location.split(',')[0]), lng = parseFloat(obs.location.split(',')[1]);
                     if (!isNaN(lat) && !isNaN(lng) && turf.booleanPointInPolygon(turf.point([lng, lat]), activePolygonFeature)) {
@@ -501,12 +532,10 @@
                         const latinName = obs.taxon?.name || 'Unknown';
                         const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(latinName)}`;
                         
-                        // Extracting variables for the updated attribution format
                         const userName = obs.user?.name || obs.user?.login || 'Unknown User';
                         const licenseCode = obs.license_code;
                         const inatLink = `https://www.inaturalist.org/observations/${obs.id}`;
                         
-                        // Updated popup HTML to include single-marker attribution
                         const popupHtml = `
                             <div class="font-sans text-center min-w-[180px] max-w-[240px] px-1 py-1">
                                 <div class="font-bold text-sm text-emerald-800">${commonName}</div>
