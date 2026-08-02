@@ -268,11 +268,6 @@
             inat: 'Observation data © <a href="https://www.inaturalist.org" target="_blank" rel="noopener">iNaturalist</a> contributors'
         };
 
-        // Opens species search in a new tab — iframe approach blocked by Google's X-Frame-Options header
-        function openGooglePopup(url) {
-            window.open(url, '_blank', 'noopener,noreferrer');
-        }
-
         const panel = document.getElementById('control-panel');
         const openBtn = document.getElementById('open-panel-btn');
         const clusterPopup = document.getElementById('cluster-popup');
@@ -347,7 +342,7 @@
                     <div class="flex-1 min-w-0">
                         <div class="text-sm font-semibold text-emerald-800 truncate">${r.commonName}</div>
                         <div class="text-xs italic text-gray-500 truncate mb-1">
-                            <a href="#" onclick="openGooglePopup('${r.searchUrl}'); return false;" class="text-blue-600 hover:text-blue-800 underline cursor-pointer">${r.latinName}</a>
+                            <a href="${r.searchUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 underline cursor-pointer">${r.latinName}</a>
                         </div>
                         <div class="text-[10px] text-gray-500 leading-tight whitespace-normal">
                             Observation by ${r.userName}, licensed under ${r.licenseCode}, sourced from <a href="${r.inatLink}" target="_blank" rel="noopener noreferrer" class="text-[#406381] hover:text-blue-800 underline">iNaturalist</a>.
@@ -542,7 +537,7 @@
                             <div class="font-sans text-center min-w-[180px] max-w-[240px] px-1 py-1">
                                 <div class="font-bold text-sm text-emerald-800">${commonName}</div>
                                 <div class="text-xs mt-1.5 mb-2">
-                                    <a href="#" onclick="openGooglePopup('${searchUrl}'); return false;" class="text-blue-600 hover:text-blue-800 underline italic transition-colors">${latinName}</a>
+                                    <a href="${searchUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 underline italic transition-colors">${latinName}</a>
                                 </div>
                                 <div class="text-[10px] text-gray-500 leading-tight border-t border-gray-100 pt-2 mt-1.5 whitespace-normal text-left">
                                     Observation by ${userName}, licensed under ${licenseCode}, sourced from <a href="${inatLink}" target="_blank" rel="noopener noreferrer" class="text-[#406381] hover:text-blue-800 underline">iNaturalist</a>.
