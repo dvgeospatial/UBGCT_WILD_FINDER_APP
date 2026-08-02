@@ -189,6 +189,7 @@
         </div>
     </div>
 
+    <!-- Cluster List Popup -->
     <div id="cluster-popup" class="hidden">
         <div class="flex items-center justify-between gap-3 px-4 py-3 border-b border-gray-100 flex-shrink-0">
             <div>
@@ -202,6 +203,7 @@
         <div id="cluster-popup-list" class="px-3 py-2 space-y-1.5"></div>
     </div>
 
+    <!-- Help Modal -->
     <div id="help-modal" class="fixed inset-0 z-[1100] hidden" aria-hidden="true">
         <div id="help-modal-backdrop" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
         <div class="absolute inset-0 flex items-center justify-center p-4 sm:p-6">
@@ -227,6 +229,29 @@
                         <h4 class="help-subheading">Become a Citizen Scientist</h4>
                         <p>Nature needs you — and you don't have to be an expert to make an important difference! By downloading the free <a href="https://uk.inaturalist.org/pages/about-uk" target="_blank" rel="noopener noreferrer">iNaturalist</a> app on your smartphone, you can record the plants and animals you encounter on your walks. Every photo you snap and share helps us understand and protect our local environment. Best of all, your own discoveries will appear on this map for everyone else to see!</p>
                     </section>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW: In-App Wikipedia Species Modal -->
+    <div id="species-modal" class="fixed inset-0 z-[1200] hidden" aria-hidden="true">
+        <div id="species-modal-backdrop" class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+        <div class="absolute inset-0 flex items-center justify-center p-4 sm:p-6 pointer-events-none">
+            <div role="dialog" class="relative w-full max-w-lg max-h-[85vh] flex flex-col rounded-2xl bg-white shadow-2xl border border-gray-200 overflow-hidden pointer-events-auto">
+                <div class="bg-white/95 backdrop-blur border-b border-gray-100 px-5 py-4 flex items-center justify-between gap-4 shrink-0">
+                    <div class="flex-1 min-w-0">
+                        <h3 id="species-modal-title" class="text-lg font-bold text-[#406381] truncate">Loading...</h3>
+                        <p id="species-modal-subtitle" class="text-sm italic text-gray-500 truncate"></p>
+                    </div>
+                    <button id="close-species-modal-btn" class="p-2 hover:bg-gray-100 transition-colors rounded-full flex-shrink-0 text-gray-500">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+                <div id="species-modal-content" class="px-5 py-5 overflow-y-auto help-body flex-1 bg-white">
+                    <div class="flex justify-center my-8">
+                        <svg class="animate-spin h-8 w-8 text-[#BCCB54]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    </div>
                 </div>
             </div>
         </div>
@@ -276,7 +301,6 @@
 
         function updateAttributionOffset() {
             const container = document.querySelector('.leaflet-bottom.leaflet-right');
-            // Ensure attribution isn't shifted off-screen completely on mobile when panel is open
             const offset = (!panel.classList.contains('translate-x-full') && window.innerWidth >= 640) ? PANEL_WIDTH : 0;
             if (container) container.style.paddingRight = offset + 'px';
         }
@@ -296,11 +320,7 @@
             panel.classList.add('translate-x-full');
             openBtn.classList.remove('hidden');
             updateAttributionOffset();
-            
-            // Zoom to the full extent of the map bounds
-            if (polygonBounds) {
-                map.fitBounds(polygonBounds, { paddingBottomRight: [20, 20], paddingTopLeft: [20, 20] });
-            }
+            if (polygonBounds) map.fitBounds(polygonBounds, { paddingBottomRight: [20, 20], paddingTopLeft: [20, 20] });
         });
 
         const helpModal = document.getElementById('help-modal');
@@ -312,12 +332,70 @@
             helpModal.classList.add('hidden');
             helpModal.setAttribute('aria-hidden', 'true');
         }));
+
+        // --- NEW WIKIPEDIA MODAL LOGIC ---
+        const speciesModal = document.getElementById('species-modal');
+        const speciesModalTitle = document.getElementById('species-modal-title');
+        const speciesModalSubtitle = document.getElementById('species-modal-subtitle');
+        const speciesModalContent = document.getElementById('species-modal-content');
+
+        function closeSpeciesModal() {
+            speciesModal.classList.add('hidden');
+            speciesModal.setAttribute('aria-hidden', 'true');
+        }
+
+        document.getElementById('close-species-modal-btn').addEventListener('click', closeSpeciesModal);
+        document.getElementById('species-modal-backdrop').addEventListener('click', closeSpeciesModal);
+
         document.addEventListener('keydown', e => {
-            if (e.key === 'Escape' && !helpModal.classList.contains('hidden')) {
-                helpModal.classList.add('hidden');
-                helpModal.setAttribute('aria-hidden', 'true');
+            if (e.key === 'Escape') {
+                if (!speciesModal.classList.contains('hidden')) closeSpeciesModal();
+                else if (!helpModal.classList.contains('hidden')) {
+                    helpModal.classList.add('hidden');
+                    helpModal.setAttribute('aria-hidden', 'true');
+                }
             }
         });
+
+        async function openSpeciesModal(latinName, commonName) {
+            speciesModalTitle.textContent = commonName;
+            speciesModalSubtitle.textContent = latinName;
+            speciesModalContent.innerHTML = `<div class="flex justify-center my-8"><svg class="animate-spin h-8 w-8 text-[#BCCB54]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg></div>`;
+            
+            speciesModal.classList.remove('hidden');
+            speciesModal.setAttribute('aria-hidden', 'false');
+
+            try {
+                // Fetch summary from the free Wikipedia REST API
+                const res = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(latinName)}`);
+                const data = await res.json();
+
+                if (data.type === 'standard' && data.extract_html) {
+                    let html = '';
+                    if (data.thumbnail && data.thumbnail.source) {
+                        html += `<img src="${data.thumbnail.source}" alt="${commonName}" class="w-full h-48 object-cover rounded-lg mb-4 shadow-sm border border-gray-100">`;
+                    }
+                    html += `<div class="text-gray-700 leading-relaxed text-sm sm:text-base">${data.extract_html}</div>`;
+                    html += `<div class="mt-4 pt-4 border-t border-gray-100 text-xs text-gray-400">Source: <a href="${data.content_urls.desktop.page}" target="_blank" rel="noopener noreferrer" class="text-[#406381] hover:text-[#BCCB54] underline transition-colors">Read full article on Wikipedia</a></div>`;
+                    speciesModalContent.innerHTML = html;
+                } else {
+                    throw new Error('Not found');
+                }
+            } catch (err) {
+                const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(latinName)}`;
+                speciesModalContent.innerHTML = `
+                    <div class="text-center py-8">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        <p class="text-gray-600 mb-5">We couldn't find a direct Wikipedia entry for this exact scientific name.</p>
+                        <a href="${searchUrl}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center gap-2 bg-[#406381] text-white px-5 py-2.5 rounded-lg font-bold hover:bg-[#2f4a60] transition-colors shadow-sm">
+                            Search Google Instead
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                        </a>
+                    </div>
+                `;
+            }
+        }
+        // ------------------------------------
 
         function hideClusterPopup() { clusterPopup.classList.add('hidden'); }
         function repositionClusterPopup(anchorPx) {
@@ -342,7 +420,7 @@
                     <div class="flex-1 min-w-0">
                         <div class="text-sm font-semibold text-emerald-800 truncate">${r.commonName}</div>
                         <div class="text-xs italic text-gray-500 truncate mb-1">
-                            <a href="${r.searchUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 underline cursor-pointer">${r.latinName}</a>
+                            <a href="#" onclick="openSpeciesModal('${r.latinName.replace(/'/g, "\\'")}', '${r.commonName.replace(/'/g, "\\'")}'); return false;" class="text-blue-600 hover:text-blue-800 underline cursor-pointer">${r.latinName}</a>
                         </div>
                         <div class="text-[10px] text-gray-500 leading-tight whitespace-normal">
                             Observation by ${r.userName}, licensed under ${r.licenseCode}, sourced from <a href="${r.inatLink}" target="_blank" rel="noopener noreferrer" class="text-[#406381] hover:text-blue-800 underline">iNaturalist</a>.
@@ -399,7 +477,6 @@
             popupAnchor: new L.Point(0, -20)
         });
 
-        // ONLY apply hover events on desktop/non-touch devices
         if (!L.Browser.touch) {
             exactPointsLayer.on('clustermouseover', e => {
                 clearTimeout(popupHoverTimeout);
@@ -408,7 +485,6 @@
             exactPointsLayer.on('clustermouseout', () => { popupHoverTimeout = setTimeout(hideClusterPopup, 200); });
         }
         
-        // Let touch devices open clusters with a standard click/tap
         exactPointsLayer.on('clusterclick', e => {
             clearTimeout(popupHoverTimeout);
             showClusterPopup(e.layer.getAllChildMarkers(), map.latLngToContainerPoint(e.layer.getLatLng()));
@@ -527,7 +603,6 @@
                     if (!isNaN(lat) && !isNaN(lng) && turf.booleanPointInPolygon(turf.point([lng, lat]), activePolygonFeature)) {
                         const commonName = obs.taxon?.preferred_common_name || 'Unknown Species';
                         const latinName = obs.taxon?.name || 'Unknown';
-                        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(latinName)}`;
                         
                         const userName = obs.user?.name || obs.user?.login || 'Unknown User';
                         const licenseCode = obs.license_code;
@@ -537,7 +612,7 @@
                             <div class="font-sans text-center min-w-[180px] max-w-[240px] px-1 py-1">
                                 <div class="font-bold text-sm text-emerald-800">${commonName}</div>
                                 <div class="text-xs mt-1.5 mb-2">
-                                    <a href="${searchUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 underline italic transition-colors">${latinName}</a>
+                                    <a href="#" onclick="openSpeciesModal('${latinName.replace(/'/g, "\\'")}', '${commonName.replace(/'/g, "\\'")}'); return false;" class="text-blue-600 hover:text-blue-800 underline italic transition-colors">${latinName}</a>
                                 </div>
                                 <div class="text-[10px] text-gray-500 leading-tight border-t border-gray-100 pt-2 mt-1.5 whitespace-normal text-left">
                                     Observation by ${userName}, licensed under ${licenseCode}, sourced from <a href="${inatLink}" target="_blank" rel="noopener noreferrer" class="text-[#406381] hover:text-blue-800 underline">iNaturalist</a>.
@@ -548,9 +623,8 @@
                             .bindPopup(popupHtml, { autoPan: false })
                             .addTo(exactPointsLayer);
                             
-                        marker.observationData = { commonName, latinName, searchUrl, userName, licenseCode, inatLink };
+                        marker.observationData = { commonName, latinName, userName, licenseCode, inatLink };
                         
-                        // ONLY apply hover events on desktop
                         if (!L.Browser.touch) {
                             marker.on('mouseover', function() { clearTimeout(popupHoverTimeout); this.openPopup(); });
                             marker.on('mouseout', function() { popupHoverTimeout = setTimeout(() => this.closePopup(), 200); });
