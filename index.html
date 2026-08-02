@@ -614,4 +614,53 @@
                             <div class="font-sans text-center min-w-[180px] max-w-[240px] px-1 py-1">
                                 <div class="font-bold text-sm text-emerald-800">${commonName}</div>
                                 <div class="text-xs mt-1.5 mb-2">
-                                    <a href="#" onclick="openSpeciesModal('${latinName.replace(/'/g, "\\'")}', '${commonName.replace(/'/g, "\\'")}'); 
+                                    <a href="#" onclick="openSpeciesModal('${latinName.replace(/'/g, "\\'")}', '${commonName.replace(/'/g, "\\'")}'); return false;" class="text-blue-600 hover:text-blue-800 underline italic transition-colors">${latinName}</a>
+                                </div>
+                                <div class="text-[10px] text-gray-500 leading-tight border-t border-gray-100 pt-2 mt-1.5 whitespace-normal text-left">
+                                    Observation by ${userName}, licensed under ${licenseCode}, sourced from <a href="${inatLink}" target="_blank" rel="noopener noreferrer" class="text-[#406381] hover:text-blue-800 underline">iNaturalist</a>.
+                                </div>
+                            </div>`;
+                            
+                        const marker = L.marker([lat, lng], { icon: singlePointClusterIcon })
+                            .bindPopup(popupHtml, { autoPan: false })
+                            .addTo(exactPointsLayer);
+                            
+                        marker.observationData = { commonName, latinName, userName, licenseCode, inatLink };
+                        
+                        if (!L.Browser.touch) {
+                            marker.on('mouseover', function() { clearTimeout(popupHoverTimeout); this.openPopup(); });
+                            marker.on('mouseout', function() { popupHoverTimeout = setTimeout(() => this.closePopup(), 200); });
+                        }
+                        
+                        marker.on('click', hideClusterPopup);
+                        mappedObsIds.add(obs.id);
+                    }
+                });
+            } catch (err) { console.error(err); }
+        }
+
+        map.on('moveend', () => {
+            clearTimeout(debounceTimer);
+            if (map.getZoom() >= POINTS_ZOOM_THRESHOLD) {
+                if (map.hasLayer(gridTilesLayer)) map.removeLayer(gridTilesLayer);
+                if (!map.hasLayer(exactPointsLayer)) exactPointsLayer.addTo(map);
+                debounceTimer = setTimeout(fetchPointsForCurrentView, 300);
+            } else {
+                if (map.hasLayer(exactPointsLayer)) map.removeLayer(exactPointsLayer);
+                if (!map.hasLayer(gridTilesLayer)) gridTilesLayer.addTo(map);
+                refreshGridLayer();
+                hideClusterPopup();
+            }
+        });
+
+        document.querySelectorAll('input[name="taxon"]').forEach(radio => radio.addEventListener('change', e => {
+            taxonId = e.target.value;
+            mappedObsIds.clear();
+            exactPointsLayer.clearLayers();
+            hideClusterPopup();
+            refreshGridLayer();
+            map.fire('moveend');
+        }));
+    </script>
+</body>
+</html>
