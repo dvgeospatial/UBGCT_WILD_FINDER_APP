@@ -120,7 +120,6 @@
             align-items: center;
             justify-content: flex-end;
             gap: 0.5rem;
-            /* Updated padding to respect iOS safe areas */
             padding: 1rem 1.5rem max(1.25rem, env(safe-area-inset-bottom));
             border-top: 1px solid rgba(64, 99, 129, 0.12);
             flex-shrink: 0;
@@ -405,14 +404,24 @@
             popupAnchor: new L.Point(0, -20)
         });
 
-        exactPointsLayer.on('clustermouseover', e => {
+        // ONLY apply hover events on desktop/non-touch devices
+        if (!L.Browser.touch) {
+            exactPointsLayer.on('clustermouseover', e => {
+                clearTimeout(popupHoverTimeout);
+                showClusterPopup(e.layer.getAllChildMarkers(), map.latLngToContainerPoint(e.layer.getLatLng()));
+            });
+            exactPointsLayer.on('clustermouseout', () => { popupHoverTimeout = setTimeout(hideClusterPopup, 200); });
+        }
+        
+        // Let touch devices open clusters with a standard click/tap
+        exactPointsLayer.on('clusterclick', e => {
             clearTimeout(popupHoverTimeout);
             showClusterPopup(e.layer.getAllChildMarkers(), map.latLngToContainerPoint(e.layer.getLatLng()));
         });
-        exactPointsLayer.on('clustermouseout', () => { popupHoverTimeout = setTimeout(hideClusterPopup, 200); });
+
         map.on('popupopen', e => {
             const popupNode = e.popup.getElement();
-            if (popupNode) {
+            if (popupNode && !L.Browser.touch) {
                 popupNode.addEventListener('mouseenter', () => clearTimeout(popupHoverTimeout));
                 popupNode.addEventListener('mouseleave', () => { popupHoverTimeout = setTimeout(() => map.closePopup(), 200); });
             }
@@ -489,7 +498,6 @@
                 }).addTo(map);
                 polygonBounds = boundaryLayer.getBounds();
                 
-                // Adjust map padding based on screen size so it centers nicely on desktop but uses full width on mobile
                 const paddingOpts = window.innerWidth >= 640 && !panel.classList.contains('translate-x-full')
                     ? { paddingBottomRight: [PANEL_WIDTH, 0], paddingTopLeft: [20, 20] }
                     : { paddingBottomRight: [20, 20], paddingTopLeft: [20, 20] };
@@ -519,7 +527,6 @@
                 const response = await fetch(apiUrl), data = await response.json();
                 if (data.results) data.results.forEach(obs => {
                     if (mappedObsIds.has(obs.id) || !obs.location) return;
-                    // Exclude observations with no licence set
                     if (!obs.license_code) { mappedObsIds.add(obs.id); return; }
                     const lat = parseFloat(obs.location.split(',')[0]), lng = parseFloat(obs.location.split(',')[1]);
                     if (!isNaN(lat) && !isNaN(lng) && turf.booleanPointInPolygon(turf.point([lng, lat]), activePolygonFeature)) {
@@ -548,8 +555,12 @@
                             
                         marker.observationData = { commonName, latinName, searchUrl, userName, licenseCode, inatLink };
                         
-                        marker.on('mouseover', function() { clearTimeout(popupHoverTimeout); this.openPopup(); });
-                        marker.on('mouseout', function() { popupHoverTimeout = setTimeout(() => this.closePopup(), 200); });
+                        // ONLY apply hover events on desktop
+                        if (!L.Browser.touch) {
+                            marker.on('mouseover', function() { clearTimeout(popupHoverTimeout); this.openPopup(); });
+                            marker.on('mouseout', function() { popupHoverTimeout = setTimeout(() => this.closePopup(), 200); });
+                        }
+                        
                         marker.on('click', hideClusterPopup);
                         mappedObsIds.add(obs.id);
                     }
