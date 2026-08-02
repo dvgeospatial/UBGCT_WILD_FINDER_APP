@@ -141,7 +141,6 @@
         #wisefrog-footer:hover img { opacity: 1; }
     </style>
 </head>
-<!-- Changed h-screen to h-[100dvh] -->
 <body class="m-0 p-0 antialiased overflow-hidden h-[100dvh] w-screen relative font-sans text-gray-800">
 
     <button id="open-panel-btn" class="absolute top-4 right-4 z-[999] px-3 py-2 rounded-lg shadow-md text-white font-bold hidden transition-all border border-transparent flex items-center gap-2" style="background-color:#BCCB54;" aria-label="Open Menu" onmouseover="this.style.backgroundColor='#a8b847'" onmouseout="this.style.backgroundColor='#BCCB54'">
@@ -149,7 +148,6 @@
         Menu
     </button>
 
-    <!-- Changed absolute + h-screen to fixed + bottom-0 -->
     <div id="control-panel" class="fixed top-0 right-0 bottom-0 z-[1000] w-full sm:w-[360px] flex flex-col bg-white/95 backdrop-blur-md shadow-2xl border-l border-gray-200 transition-transform duration-300 ease-in-out translate-x-0">
         <button id="close-panel-btn" class="absolute top-3 right-3 z-[1001] p-2 text-gray-500 hover:text-gray-800 transition-colors bg-white/80 backdrop-blur rounded-full shadow-sm" aria-label="Close Menu">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
@@ -287,12 +285,6 @@
             // Ensure attribution isn't shifted off-screen completely on mobile when panel is open
             const offset = (!panel.classList.contains('translate-x-full') && window.innerWidth >= 640) ? PANEL_WIDTH : 0;
             if (container) container.style.paddingRight = offset + 'px';
-        }
-
-        // Auto-hide the panel on mobile devices on initial load
-        if (window.innerWidth < 640) {
-            panel.classList.add('translate-x-full');
-            openBtn.classList.remove('hidden');
         }
 
         openBtn.addEventListener('click', () => {
